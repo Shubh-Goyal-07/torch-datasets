@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "torch-datasets"
-version = "0.0.1"
+name = "torch-custom-datasets"
+version = "0.0.3"
 description = "A suite of custom PyTorch dataset loaders for vision tasks like classification and segmentation."
 readme = "README.md"
 license = { text = "Apache-2.0" }
