@@ -1,5 +1,7 @@
 # torch-datasets
 
+Note: This is a placeholder release to reserve the package name. A proper release will follow soon.
+
 **One toolkit for all your PyTorch data loading needs.**  
 _Still cooking — stay tuned!_
 

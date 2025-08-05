@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "torchdatasets"
-version = "0.1.0"
+version = "0.0.1"
 description = "A suite of custom PyTorch dataset loaders for vision tasks like classification and segmentation."
 readme = "README.md"
 license = { text = "Apache-2.0" }
