@@ -2,15 +2,18 @@ from torch.utils.data import Dataset
 from PIL import Image
 from collections import defaultdict
 
+from torchdatasets.vision.constants import DEFAULT_IMAGE_EXTENSIONS
+
 
 class BaseImageClassificationDataset(Dataset):
-    def __init__(self, transform=None, return_path=False):
+    def __init__(self, transform=None, return_path=False, extensions=None):
         self.transform = transform
         self.return_path = return_path
-        self.samples = []          # List of (path, label)
-        self.class_to_idx = {}     # Dict[str, int]
-        self.idx_to_class = {}     # Dict[int, str]
-        self.class_count = {}      # Dict[int, int]
+        self.samples = []
+        self.class_to_idx = {}
+        self.idx_to_class = {}
+        self.class_count = {}
+        self.extensions = set(ext.lower() for ext in (extensions or DEFAULT_IMAGE_EXTENSIONS))
 
     def finalize(self):
         """
@@ -18,7 +21,6 @@ class BaseImageClassificationDataset(Dataset):
         Initializes idx_to_class and class_count.
         """
         self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
-
         count = defaultdict(int)
         for _, label in self.samples:
             count[label] += 1
