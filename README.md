@@ -75,9 +75,9 @@ for images, labels in dataloader:
 | ------------------------ | -------------- |
 | Project initialized      | ✅ Complete     |
 | Image datasets           | 🚧 In Progress |
+| Tabular datasets         | 🚧 In Progress |
 | Text datasets            | ⏳ Planned      |
 | Audio datasets           | ⏳ Planned      |
-| Tabular datasets         | ⏳ Planned      |
 | Custom dataset interface | ⏳ Planned      |
 | Plugin support           | ⏳ Planned      |
 | Benchmarking tools       | ⏳ Planned      |
