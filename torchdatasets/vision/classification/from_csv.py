@@ -11,8 +11,15 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
       - Customizable column names
       - Multi-label classification (comma/semicolon separated labels)
     """
-    def __init__(self, file_path, transform=None, path_col="path", label_col="label", sep=None):
-        super().__init__(transform=transform)
+    def __init__(self,
+                 file_path,
+                 transform=None,
+                 path_col="path",
+                 label_col="label",
+                 sep=None,
+                 extensions=None,
+                 return_path=False):
+        super().__init__(transform=transform, extensions=extensions, return_path=return_path)
         self.file_path = Path(file_path)
         self.path_col = path_col
         self.label_col = label_col

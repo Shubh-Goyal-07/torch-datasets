@@ -3,8 +3,8 @@ from pathlib import Path
 from .base import BaseImageClassificationDataset
 
 class ImageSingleDirDataset(BaseImageClassificationDataset):
-    def __init__(self, root, transform=None, label_map=None, delimiter="_"):
-        super().__init__(transform=transform)
+    def __init__(self, root, transform=None, label_map=None, delimiter="_", extensions=None, return_path=False):
+        super().__init__(transform=transform, extensions=extensions, return_path=return_path)
         self.root = Path(root)
         self.delimiter = delimiter
         self.make_dataset(label_map=label_map)
