@@ -1,4 +1,4 @@
-from .wrappers import BaseMetricLearningWrapper
+from .base import BaseMetricLearningWrapper
 import random
 from collections import defaultdict
 

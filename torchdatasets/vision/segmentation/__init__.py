@@ -1,9 +1,9 @@
 from .base import BaseImageSegmentationDataset
-from .from_csv import ImageSegmentationCSVXLSXDataset
-from .from_subdirs import ImageSegmentationSubdirDataset
+from .from_csv import ImageCSVXLSXDataset
+from .from_subdirs import ImageSubdirDataset
 
 __all__ = [
-    "ImageSegmentationCSVXLSXDataset",
-    "ImageSegmentationSubdirDataset",
+    "ImageCSVXLSXDataset",
+    "ImageSubdirDataset",
     "BaseImageSegmentationDataset",
 ]

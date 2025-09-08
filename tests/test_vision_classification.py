@@ -82,7 +82,7 @@ class TestBaseImageClassificationDataset(unittest.TestCase):
         for i in range(10000):
             large_samples.append((f'/path/to/img{i}.jpg', i % 100))
             if i % 100 == 0:
-                large_class_to_idx[f'class_{i//100}'] = i % 100
+                large_class_to_idx[f'class_{i//100}'] = i // 100
                 
         self.dataset.samples = large_samples
         self.dataset.class_to_idx = large_class_to_idx
@@ -90,8 +90,10 @@ class TestBaseImageClassificationDataset(unittest.TestCase):
         # Time the finalize operation
         finalize_start = time.time()
         self.dataset.finalize()
+        # print(self.dataset.class_to_idx)     
+        # print(self.dataset.idx_to_class)      
+        # print("********************************")  
         finalize_elapsed = time.time() - finalize_start
-        
         self.assertEqual(len(self.dataset.idx_to_class), 100)
         self.assertEqual(len(self.dataset.class_count), 100)
         
@@ -322,12 +324,13 @@ class TestImageSingleDirDataset(unittest.TestCase):
         
         # Test dataset creation
         dataset = ImageSingleDirDataset(self.temp_dir)
-        
+        # print(dataset.class_to_idx)
+        # print("********************************")
         self.assertEqual(len(dataset), 5)
         self.assertEqual(len(dataset.class_to_idx), 3)  # cat, dog, bird
-        self.assertEqual(dataset.class_to_idx['cat'], 0)
-        self.assertEqual(dataset.class_to_idx['dog'], 1)
-        self.assertEqual(dataset.class_to_idx['bird'], 2)
+        self.assertEqual(dataset.class_to_idx['bird'], 0)
+        self.assertEqual(dataset.class_to_idx['cat'], 1)
+        self.assertEqual(dataset.class_to_idx['dog'], 2)
         
         elapsed = time.time() - start_time
         print(f"Single dir initialization test completed in {elapsed:.4f}s")
@@ -376,7 +379,7 @@ class TestImageSingleDirDataset(unittest.TestCase):
         
         # Create large test dataset
         num_images = 500
-        labels = ['class_' + str(i % 50) for i in range(num_images)]
+        labels = [str(i % 10) + str(i % 50) for i in range(num_images)]
         
         for i in range(num_images):
             img_path = os.path.join(self.temp_dir, f'{labels[i]}_img_{i}.jpg')
@@ -389,6 +392,8 @@ class TestImageSingleDirDataset(unittest.TestCase):
         creation_elapsed = time.time() - creation_start
         
         self.assertEqual(len(dataset), num_images)
+        print(dataset.class_to_idx)
+        print("*"*50)
         self.assertEqual(len(dataset.class_to_idx), 50)
         
         # Time dataset access

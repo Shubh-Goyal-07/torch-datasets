@@ -15,6 +15,8 @@ class ImageSubdirDataset(BaseImageSegmentationDataset):
                 ):
         super().__init__(transform=transform, extensions=extensions, return_path=return_path, binary_mask=binary_mask)
         
+        print("*"*50)
+        print(image_dir, mask_dir)
         self.image_dir = Path(image_dir)
         self.mask_dir = Path(mask_dir)
         self.suffix = suffix

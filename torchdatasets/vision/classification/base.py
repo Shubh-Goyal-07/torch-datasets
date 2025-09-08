@@ -23,7 +23,11 @@ class BaseImageClassificationDataset(Dataset):
         self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
         count = defaultdict(int)
         for _, label in self.samples:
-            count[label] += 1
+            if isinstance(label, list):
+                for lbl in label:
+                    count[lbl] += 1 
+            else: 
+                count[label] += 1
         self.class_count = dict(count)
 
     def __len__(self):
