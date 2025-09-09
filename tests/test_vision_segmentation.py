@@ -132,9 +132,6 @@ class TestBaseImageSegmentationDataset(unittest.TestCase):
             mock_open.side_effect = [mock_img, mock_mask]
             
             result = dataset[0]
-            # print("*" * 50)
-            # print("Transforms", dataset.transform)
-            # print("Result", result[0])
             self.assertEqual(result[0], 'transformed_img')
             self.assertEqual(result[1], 'transformed_mask')
             # mock_transform.assert_called_once()

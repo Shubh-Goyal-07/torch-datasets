@@ -29,14 +29,21 @@ class ImageSubdirDataset(BaseImageSegmentationDataset):
         for img_path in self.image_dir.glob("*"):
             if not img_path.is_file() or img_path.suffix.lower() not in self.extensions:
                 continue
-            
+
             name = img_path.stem
-            ext = img_path.suffix
-            mask_name = name + (self.suffix or "") + ext
-            mask_path = self.mask_dir / mask_name
+            expected_mask_stem = name + (self.suffix or "")
             
-            if mask_path.exists():
-                samples.append((img_path, mask_path))
-        
+            # Search for any mask with matching stem and valid extension
+            matched = False
+            for ext in self.extensions:
+                mask_path = self.mask_dir / f"{expected_mask_stem}{ext}"
+                if mask_path.exists():
+                    samples.append((img_path, mask_path))
+                    matched = True
+                    break  # stop at first match
+
+            if not matched:
+                print(f"Warning: No mask found for {img_path.name} with stem '{expected_mask_stem}'")
+
         assert len(samples) > 0, "No valid samples found in the dataset."
         self.samples = samples

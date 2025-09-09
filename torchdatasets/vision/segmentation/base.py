@@ -38,7 +38,7 @@ class BaseImageSegmentationDataset(Dataset):
         image = np.array(Image.open(img_path).convert("RGB"))
         
         mask = Image.open(mask_path)
-        mask = np.array(mask.covert("1" if self.binary_mask else "L"))
+        mask = np.array(mask.convert("1" if self.binary_mask else "L"))
 
         if self.transform:
             out = self.transform(image=image, mask=mask)
