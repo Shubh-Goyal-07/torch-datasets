@@ -392,8 +392,8 @@ class TestImageSingleDirDataset(unittest.TestCase):
         creation_elapsed = time.time() - creation_start
         
         self.assertEqual(len(dataset), num_images)
-        print(dataset.class_to_idx)
-        print("*"*50)
+        # print(dataset.class_to_idx)
+        # print("*"*50)
         self.assertEqual(len(dataset.class_to_idx), 50)
         
         # Time dataset access
