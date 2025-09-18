@@ -3,17 +3,16 @@ import torch
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder
-from collections.abc import Callable
+from typing import List, Callable
 
 
 class BaseTabularDataset(Dataset):
-    
     def __init__(
         self,
         handle_missing: bool = True,
         fill_missing: str = 'mean',
         scaling_type: str = 'standard',
-        scaling_features: list = None,
+        scaling_features: List = None,
         encode_categorical: bool = True,
         drop_duplicates: bool = False,
         transform: Callable = None,

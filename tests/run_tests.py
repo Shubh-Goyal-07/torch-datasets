@@ -177,7 +177,7 @@ def run_performance_benchmark():
     
     try:
         # Import and run performance tests
-        from tests.test_vision_performance import VisionDatasetPerformanceTest
+        from tests.vision.performance import VisionDatasetPerformanceTest
         
         # Create test suite
         loader = unittest.TestLoader()
