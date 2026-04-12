@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torch-custom-datasets"
+version = "0.0.3"
+description = "A suite of custom PyTorch dataset loaders for vision tasks like classification and segmentation."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9,<3.12"
+
+authors = [
+  { name = "Shubh Goyal", email = "goyal.shubh0711@gmail.com" }
+]
+
+keywords = ["pytorch", "datasets", "torch", "deep-learning", "vision", "classification", "segmentation"]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+  "torch>=2.0.0",
+  "torchvision>=0.15.0",
+  "Pillow>=9.0.0",
+  "numpy>=1.22.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/Shubh-Goyal-07/torch-datasets"
+Documentation = "https://github.com/Shubh-Goyal-07/torch-datasets#readme"
+Source = "https://github.com/Shubh-Goyal-07/torch-datasets"
+Tracker = "https://github.com/Shubh-Goyal-07/torch-datasets/issues"
+
+[tool.black]
+line-length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
