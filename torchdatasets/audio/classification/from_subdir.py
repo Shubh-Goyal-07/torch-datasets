@@ -25,9 +25,9 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
         samples: List[tuple[Path, int]] = []
 
         for cls in classes:
-            for img_path in (self.root / cls).glob("*"):
-                if img_path.is_file() and img_path.suffix.lower() in self.extensions:
-                    samples.append((img_path, self.class_to_idx[cls]))
+            for audio_path in (self.root / cls).glob("*"):
+                if audio_path.is_file() and audio_path.suffix.lower() in self.extensions:
+                    samples.append((audio_path, self.class_to_idx[cls]))
 
         self.samples = samples
         assert len(self.samples) > 0, "No valid samples found in the dataset."

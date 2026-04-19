@@ -35,7 +35,7 @@ class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
         classes: set[str] = set()
 
         for _, row in df.iterrows():
-            img_path = Path(row[self.path_col])
+            audio_path = Path(row[self.path_col])
             label_cell = row[self.label_col]
 
             if self.label_sep is None:
@@ -43,11 +43,11 @@ class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
             else:
                 labels = [lbl.strip() for lbl in str(label_cell).split(self.label_sep)]
 
-            if img_path.suffix.lower() in self.extensions and img_path.is_file():
-                samples.append((img_path, labels if self.label_sep else labels[0]))
+            if audio_path.suffix.lower() in self.extensions and audio_path.is_file():
+                samples.append((audio_path, labels if self.label_sep else labels[0]))
                 classes.update(labels)
 
-        assert len(samples) > 0, "No valid image entries found in CSV/XLSX."
+        assert len(samples) > 0, "No valid audio entries found in CSV/XLSX."
         classes = sorted(classes)
         self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
 
@@ -56,4 +56,4 @@ class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
                 return [self.class_to_idx[x] for x in lbl]
             return self.class_to_idx[lbl]
 
-        self.samples = [(img_path, encode_labels(labels)) for img_pth, labels in samples]
+        self.samples = [(audio_path, encode_labels(labels)) for audio_path, labels in samples]

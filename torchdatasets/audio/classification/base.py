@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 from collections import defaultdict
 import torchaudio
+from typing import List, Optional, Callable, Tuple, Any, Dict, Union
 
 from torchdatasets._internal.io.audio import DEFAULT_AUDIO_EXTENSIONS, load_audio
 
@@ -8,24 +9,24 @@ from torchdatasets._internal.io.audio import DEFAULT_AUDIO_EXTENSIONS, load_audi
 class BaseAudioClassificationDataset(Dataset):
     def __init__(
             self,
-            transform=None,
-            return_path=False,
-            extensions=None,
-            sample_rate=None
-        ):
-        self.transform = transform
-        self.return_path = return_path
-        self.sample_rate = sample_rate
-        self.samples = []
-        self.class_to_idx = {}
-        self.idx_to_class = {}
-        self.class_count = {}
-        self.extensions = set(ext.lower() for ext in (extensions or DEFAULT_AUDIO_EXTENSIONS))
+            transform: Optional[Callable] = None,
+            return_path: bool = False,
+            extensions: Optional[List[str]] = None,
+            sample_rate: Optional[int] = None
+        ) -> None:
+        self.transform: Optional[Callable] = transform
+        self.return_path: bool = return_path
+        self.sample_rate: Optional[int] = sample_rate
+        self.samples: List[Tuple[str, Union[int, List[int]]]] = []
+        self.class_to_idx: Dict[str, int] = {}
+        self.idx_to_class: Dict[int, str] = {}
+        self.class_count: Dict[str, int] = {}
+        self.extensions: set[str] = set(ext.lower() for ext in (extensions or DEFAULT_AUDIO_EXTENSIONS))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.samples)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> Tuple[Any, Union[int, List[int]]] | Tuple[Any, Union[int, List[int]], str]:
         path, label = self.samples[idx]
         waveform, sr = load_audio(path, self.sample_rate)
 
@@ -36,7 +37,7 @@ class BaseAudioClassificationDataset(Dataset):
             return waveform, label, str(path)
         return waveform, label
     
-    def create_metadata(self):
+    def create_metadata(self) -> None:
         self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
         count = defaultdict(int)
         for _, label in self.samples:
