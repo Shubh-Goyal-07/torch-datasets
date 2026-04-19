@@ -36,6 +36,7 @@ class BaseImageClassificationDataset(Dataset):
     def _load_samples(self) -> None:
         raise NotImplementedError("Subclasses must implement _load_samples method to populate self.samples")
 
+    # TODO: update this to be same as audio classification base
     def create_metadata(self) -> None:
         self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
         count = defaultdict(int)
