@@ -35,7 +35,7 @@ _Still cooking — stay tuned!_
 For now, you can install the development version directly from source:
 
 ```bash
-git clone https://github.com/yourusername/torch-datasets.git
+git clone https://github.com/Shubh-Goyal-07/torch-datasets.git
 cd torch-datasets
 pip install -e .
 ````
@@ -45,7 +45,7 @@ pip install -e .
 ## 🧑‍💻 Quick Start
 
 ```python
-from torchdatasets.vision.classification import FromSubDirDataset
+from torchdatasets.image.classification import FromSubDirDataset
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
@@ -78,8 +78,7 @@ for images, labels in dataloader:
 | Tabular datasets         | 🚧 In Progress |
 | Text datasets            | ⏳ Planned      |
 | Audio datasets           | ⏳ Planned      |
-| Custom dataset interface | ⏳ Planned      |
-| Plugin support           | ⏳ Planned      |
+| Multimodal datasets      | ⏳ Planned      |
 | Benchmarking tools       | ⏳ Planned      |
 
 Follow the repository for ongoing updates. Feature suggestions and pull requests are welcome!

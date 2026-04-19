@@ -2,7 +2,7 @@
 
 Hi everyone! 
 
-I'm Shubh, and I've started this project to build a collection of PyTorch dataset classes that are easy to use and help simplify and speed up data loading for everyone.
+I'm Shubh, I've started this project with Soham to build a collection of PyTorch dataset classes that are easy to use and help simplify and speed up data loading for everyone.
 
 As we haven’t released a version on PyPI yet, we're currently not accepting pull requests. However, if you’re interested in contributing, we’d love to hear your ideas! Feel free to share your suggestions on the Issues page.
 
