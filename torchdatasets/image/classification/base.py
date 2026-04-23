@@ -1,7 +1,7 @@
 from torch.utils.data import Dataset
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Optional, Callable, Tuple, Any, Dict
+from typing import List, Optional, Callable, Tuple, Any, Dict, Union
 
 from torchdatasets._internal.io.image import DEFAULT_IMAGE_EXTENSIONS, load_image
 
@@ -15,7 +15,7 @@ class BaseImageClassificationDataset(Dataset):
         ) -> None:
         self.transform = transform
         self.return_path = return_path
-        self.samples: List[Tuple[str, int]] = []
+        self.samples: List[Tuple[str, Union[int, List[int]]]] = []
         self.class_to_idx: Dict[str, int] = {}
         self.idx_to_class: Dict[int, str] = {}
         self.class_count: Dict[str, int] = {}
@@ -24,7 +24,7 @@ class BaseImageClassificationDataset(Dataset):
     def __len__(self) -> int:
         return len(self.samples)
     
-    def __getitem__(self, idx: int) -> Tuple[Any, int] | Tuple[Any, int, str]:
+    def __getitem__(self, idx: int) -> Tuple[Any, Union[int, List[int]]] | Tuple[Any, Union[int, List[int]], str]:
         path, label = self.samples[idx]
         img = load_image(path)
         if self.transform:
@@ -36,10 +36,13 @@ class BaseImageClassificationDataset(Dataset):
     def _load_samples(self) -> None:
         raise NotImplementedError("Subclasses must implement _load_samples method to populate self.samples")
 
-    # TODO: update this to be same as audio classification base
     def create_metadata(self) -> None:
         self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
         count = defaultdict(int)
         for _, label in self.samples:
-            count[label] += 1
+            if isinstance(label, list):
+                for lbl in label:
+                    count[lbl] += 1
+            else:
+                count[label] += 1
         self.class_count = dict(count)
