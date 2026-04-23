@@ -1,12 +1,12 @@
 from pathlib import Path
 import pandas as pd
 from typing import List, Optional, Callable, Union
-
 from torchdatasets.audio.classification.base import BaseAudioClassificationDataset
 from torchdatasets._internal.io.common import load_csv_or_excel
 
 
 class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
+
     def __init__(
             self,
             file_path: Union[str, Path],
@@ -26,7 +26,9 @@ class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
         self._load_samples()
         self.create_metadata()
 
+
     def _load_samples(self) -> None:
+
         df = load_csv_or_excel(self.file_path)
 
         assert self.path_col in df.columns and self.label_col in df.columns, f"File must contain '{self.path_col}' and '{self.label_col}' columns."
@@ -48,6 +50,7 @@ class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
                 classes.update(labels)
 
         assert len(samples) > 0, "No valid audio entries found in CSV/XLSX."
+
         classes = sorted(classes)
         self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
 

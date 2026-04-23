@@ -7,6 +7,7 @@ from torchdatasets._internal.io.common import load_csv_or_excel
 
 
 class ImageCSVXLSXDataset(BaseImageClassificationDataset):
+
     def __init__(
             self,
             file_path: Union[str, Path],
@@ -25,7 +26,10 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
         self._load_samples()
         self.create_metadata()
 
+
+
     def _load_samples(self) -> None:
+
         df = load_csv_or_excel(self.file_path)
 
         assert self.path_col in df.columns and self.label_col in df.columns, f"File must contain '{self.path_col}' and '{self.label_col}' columns."
@@ -47,6 +51,7 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
                 classes.update(labels)
 
         assert len(samples) > 0, "No valid image entries found in CSV/XLSX."
+        
         classes = sorted(classes)
         self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
 
