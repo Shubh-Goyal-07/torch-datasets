@@ -1,7 +1,6 @@
-from torch.utils.data import Dataset
 from collections import defaultdict
-from pathlib import Path
 from typing import List, Optional, Callable, Tuple, Any, Dict
+from torch.utils.data import Dataset
 
 from torchdatasets._internal.io.image import DEFAULT_IMAGE_EXTENSIONS, load_image
 
