@@ -18,7 +18,7 @@ class BaseImageClassificationDataset(Dataset):
         self.class_to_idx: Dict[str, int] = {}
         self.idx_to_class: Dict[int, str] = {}
         self.class_count: Dict[str, int] = {}
-        self.extensions = extensions if extensions is not None else DEFAULT_IMAGE_EXTENSIONS
+        self.extensions = set(ext.lower() for ext in (extensions or DEFAULT_IMAGE_EXTENSIONS))
 
     def __len__(self) -> int:
         return len(self.samples)

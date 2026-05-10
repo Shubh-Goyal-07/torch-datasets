@@ -41,3 +41,6 @@ class BaseImageSegmentationDataset(Dataset):
             return image, mask, str(img_path)
         
         return image, mask
+
+    def _load_samples(self) -> None:
+        raise NotImplementedError("Subclasses must implement _load_samples method to populate self.samples")
