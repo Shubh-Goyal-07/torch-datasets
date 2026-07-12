@@ -8,7 +8,10 @@ from torch.utils.data import Dataset
 from torchdatasets._internal.io.image import DEFAULT_IMAGE_EXTENSIONS, load_image, load_mask
 
 
+# TODO: Add support for torch and albumentations transforms
 class BaseImageSegmentationDataset(Dataset):
+    """Base class to be used as parent class for image segmentation datasets."""
+
     def __init__(
             self,
             transform: Optional[Callable] = None,
@@ -16,6 +19,14 @@ class BaseImageSegmentationDataset(Dataset):
             extensions: Optional[List[str]] = None,
             is_binary: bool = False
         ) -> None:
+        """Initialize the dataset.
+
+        Args:
+            transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
+            return_path (bool, optional): Whether to return the path to the image. Defaults to False.
+            extensions (Optional[List[str]], optional): Optional list of image extensions. Defaults to None.
+            is_binary (bool, optional): Whether the mask is binary. Defaults to False.
+        """
         self.transform = transform
         self.return_path = return_path
         self.is_binary = is_binary
@@ -23,9 +34,22 @@ class BaseImageSegmentationDataset(Dataset):
         self.samples: List[Tuple[str, int]] = []
         
     def __len__(self):
+        """Return the number of samples in the dataset.
+        
+        Returns:
+            int: The number of samples in the dataset.
+        """
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor, str]]:
+        """Get a single sample from the dataset.
+
+        Args:
+            idx (int): Index of the sample to retrieve.
+
+        Returns:
+            Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor, str]]: Image as torch.Tensor and its mask as torch.Tensor. If return_path is True, returns the path to the image.
+        """
         img_path, mask_path = self.samples[idx]
 
         image_np = load_image(img_path)
@@ -43,4 +67,9 @@ class BaseImageSegmentationDataset(Dataset):
         return image, mask
 
     def _load_samples(self) -> None:
+        """To be implemented in the children classes.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in the children classes.
+        """
         raise NotImplementedError("Subclasses must implement _load_samples method to populate self.samples")
