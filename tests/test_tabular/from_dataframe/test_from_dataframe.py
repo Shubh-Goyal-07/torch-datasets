@@ -510,3 +510,140 @@ class TestAttributesAndHelpers:
         )
         with pytest.raises(IndexError):
             _ = dataset[999]
+
+
+# ---------------------------------------------------------------------------
+# Class-label encoding and column arguments
+# ---------------------------------------------------------------------------
+
+class TestClassLabelEncoding:
+
+    def test_string_labels_are_encoded(self):
+        df = pd.DataFrame({'f1': [1.0, 2.0, 3.0, 4.0], 'y': ['cat', 'dog', 'cat', 'bird']})
+        dataset = TabularDatasetFromDataFrame(df, target_cols='y', drop_duplicates=False)
+        assert dataset.class_to_idx == {'bird': 0, 'cat': 1, 'dog': 2}
+        assert dataset.idx_to_class == {0: 'bird', 1: 'cat', 2: 'dog'}
+        assert dataset.y.tolist() == [1, 2, 1, 0]
+        assert dataset.n_classes == 3
+        assert dataset.get_dataset_info()['classes'] == ['bird', 'cat', 'dog']
+
+    def test_non_contiguous_int_labels_are_remapped(self):
+        df = pd.DataFrame({'f1': [1.0, 2.0, 3.0, 4.0, 5.0], 'y': [3, 7, 3, 7, 10]})
+        dataset = TabularDatasetFromDataFrame(df, target_cols='y')
+        assert dataset.class_to_idx == {3: 0, 7: 1, 10: 2}
+        assert all(isinstance(k, int) for k in dataset.class_to_idx)
+        assert dataset.y.tolist() == [0, 1, 0, 1, 2]
+        # Labels must be valid for CrossEntropyLoss with n_classes outputs
+        logits = torch.zeros(len(dataset), dataset.n_classes)
+        torch.nn.functional.cross_entropy(logits, dataset.y)
+
+    def test_single_feature_col_as_string(self):
+        df = create_sample_dataframe()
+        dataset = TabularDatasetFromDataFrame(df, target_cols='target_class', feature_cols='num_feature1')
+        assert dataset.feature_cols == ['num_feature1']
+        assert dataset.X.shape == (10, 1)
+
+    def test_missing_target_values_raise(self):
+        df = pd.DataFrame({'f1': [1.0, 2.0, 3.0], 'y': ['a', None, 'b']})
+        with pytest.raises(ValueError, match="missing values"):
+            TabularDatasetFromDataFrame(df, target_cols='y')
+
+    def test_scaling_type_none_is_accepted(self):
+        df = create_sample_dataframe()
+        dataset = TabularDatasetFromDataFrame(
+            df, target_cols='target_class', feature_cols=['num_feature2'], scaling_type=None
+        )
+        raw = torch.tensor(df['num_feature2'].values, dtype=torch.float32)
+        assert torch.allclose(dataset.X[:, 0], raw, atol=1e-5)
+
+
+# ---------------------------------------------------------------------------
+# Reusing fitted preprocessing on validation / test data
+# ---------------------------------------------------------------------------
+
+class TestFitFrom:
+
+    @staticmethod
+    def _train_df():
+        return pd.DataFrame({
+            'num': [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
+            'cat': ['A', 'B', 'C', 'A', 'B', 'C', 'A', 'B', 'C', 'A'],
+            'y': ['cat', 'dog'] * 5,
+        })
+
+    def test_scaler_is_reused(self):
+        train = TabularDatasetFromDataFrame(self._train_df(), target_cols='y', feature_cols=['num'])
+        val_df = pd.DataFrame({'num': [100.0, 200.0], 'y': ['cat', 'dog']})
+        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+
+        assert val.scaler is train.scaler
+        mean, std = 4.5, np.std(np.arange(10.0))  # StandardScaler uses the population std
+        expected = torch.tensor([(100.0 - mean) / std, (200.0 - mean) / std], dtype=torch.float32)
+        assert torch.allclose(val.X[:, 0], expected, atol=1e-4)
+
+    def test_fill_values_are_reused(self):
+        train = TabularDatasetFromDataFrame(
+            self._train_df(), target_cols='y', feature_cols=['num'], scaling_type='none'
+        )
+        val_df = pd.DataFrame({'num': [np.nan, 50.0], 'y': ['cat', 'dog']})
+        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        assert val.X[0, 0].item() == pytest.approx(4.5)  # train mean, not val mean (50)
+
+    def test_category_encoding_is_reused(self):
+        train = TabularDatasetFromDataFrame(
+            self._train_df(), target_cols='y', feature_cols=['cat'], scaling_type='none'
+        )
+        val_df = pd.DataFrame({'cat': ['C', 'A'], 'y': ['cat', 'dog']})
+        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        assert val.X[:, 0].tolist() == [2.0, 0.0]  # refitting would give [1, 0]
+
+    def test_unseen_category_is_encoded_as_minus_one(self):
+        train = TabularDatasetFromDataFrame(
+            self._train_df(), target_cols='y', feature_cols=['cat'], scaling_type='none'
+        )
+        val_df = pd.DataFrame({'cat': ['Z', 'A'], 'y': ['cat', 'dog']})
+        with pytest.warns(UserWarning, match="not seen during fitting"):
+            val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        assert val.X[:, 0].tolist() == [-1.0, 0.0]
+
+    def test_label_encoding_is_reused(self):
+        train = TabularDatasetFromDataFrame(self._train_df(), target_cols='y')
+        val_df = pd.DataFrame({'num': [1.0], 'cat': ['A'], 'y': ['dog']})
+        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        assert val.y.tolist() == [1]  # 'dog' keeps index 1 even though it is the only class here
+        assert val.n_classes == 2
+        assert val.class_to_idx == train.class_to_idx
+
+    def test_unseen_target_label_raises(self):
+        train = TabularDatasetFromDataFrame(self._train_df(), target_cols='y')
+        val_df = pd.DataFrame({'num': [1.0], 'cat': ['A'], 'y': ['horse']})
+        with pytest.raises(ValueError, match="not seen"):
+            TabularDatasetFromDataFrame(val_df, fit_from=train)
+
+    def test_bin_edges_are_reused(self):
+        df = pd.DataFrame({'f1': np.arange(11.0), 't': np.arange(11.0)})
+        train = TabularDatasetFromDataFrame(df, target_cols='t', task='classification', n_bins=2)
+        val_df = pd.DataFrame({'f1': [0.0, 0.0, 0.0], 't': [-5.0, 2.0, 100.0]})
+        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        assert val.y.tolist() == [0, 0, 1]  # out-of-range values fall into the outer bins
+        assert np.array_equal(val.bin_edges, train.bin_edges)
+
+    def test_settings_and_columns_are_inherited(self):
+        train = TabularDatasetFromDataFrame(
+            self._train_df(), target_cols='y', feature_cols=['num'],
+            task='classification', scaling_type='minmax', fill_missing='median',
+        )
+        val = TabularDatasetFromDataFrame(self._train_df().head(3), fit_from=train)
+        assert val.task == 'classification'
+        assert val.scaling_type == 'minmax'
+        assert val.fill_missing == 'median'
+        assert val.feature_cols == ['num'] and val.target_cols == ['y']
+
+    def test_mismatched_columns_raise(self):
+        train = TabularDatasetFromDataFrame(self._train_df(), target_cols='y', feature_cols=['num'])
+        with pytest.raises(ValueError, match="must match"):
+            TabularDatasetFromDataFrame(self._train_df(), feature_cols=['num', 'cat'], fit_from=train)
+
+    def test_fit_from_must_be_a_dataset(self):
+        with pytest.raises(TypeError):
+            TabularDatasetFromDataFrame(self._train_df(), target_cols='y', fit_from="train")

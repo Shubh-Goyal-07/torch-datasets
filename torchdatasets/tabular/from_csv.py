@@ -12,8 +12,8 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
     
     def __init__(
             self, 
-            file_path: str,
-            target_cols: Union[str, List[str]],
+            file_path: Union[str, Path],
+            target_cols: Optional[Union[str, List[str]]] = None,
             feature_cols: Optional[Union[str, List[str]]] = None,
             task: Optional[str] = 'classification',
             # Preprocessing options (passed to base class)
@@ -26,24 +26,27 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             n_bins: Optional[int] = 0,
             # Transform options
             transform: Optional[Callable] = None,
-            target_transform: Optional[Callable] = None
+            target_transform: Optional[Callable] = None,
+            fit_from: Optional[TabularDatasetFromDataFrame] = None
         ) -> None:
         """Initialize the dataset from a CSV or Excel file.
         
         Args:
-            file_path (str): Path to the CSV or Excel file.
-            target_cols (Union[str, List[str]]): List of target column names.
-            feature_cols (Optional[Union[str, List[str]]], optional): List of feature column names. Defaults to None.
+            file_path (Union[str, Path]): Path to the CSV or Excel file.
+            target_cols (Optional[Union[str, List[str]]], optional): Target column name or list of names. Required unless fit_from is given.
+            feature_cols (Optional[Union[str, List[str]]], optional): Feature column name or list of names. Defaults to None (all non-target columns).
             task (str, optional): Type of task, options ['classification', 'regression']. Defaults to 'classification'.
             handle_missing (bool, optional): Whether to handle missing values. Defaults to True.
-            fill_missing (str, optional): Method to fill missing values, options ['mean', 'median', 'mode', None]. Defaults to 'mean'.
-            scaling_type (str, optional): Type of scaling to apply, options ['standard', 'minmax', None]. Defaults to 'standard'.
+            fill_missing (str, optional): Method to fill missing values, options ['mean', 'median', 'mode', 'constant']. Defaults to 'mean'.
+            scaling_type (str, optional): Type of scaling to apply, options ['standard', 'minmax', 'none'] (None is treated as 'none'). Defaults to 'standard'.
             scaling_features (Optional[List[str]], optional): List of features to scale. Defaults to None. If None, all numerical features will be scaled.
             encode_categorical (bool, optional): Whether to encode categorical features. Defaults to True.
             drop_duplicates (bool, optional): Whether to drop duplicate rows. Defaults to True.
             n_bins (int, optional): Number of bins to use for discretization. Defaults to 0. Only applicable when task is 'classification', otherwise it will be ignored.
             transform (Optional[Callable], optional): Optional transform to be applied to the features. Defaults to None.
             target_transform (Optional[Callable], optional): Optional transform to be applied to the targets. Defaults to None.
+            fit_from (Optional[TabularDatasetFromDataFrame], optional): An already-built dataset (e.g. the training set) whose
+                fitted preprocessing, label encoding, columns, task and preprocessing options are reused. Defaults to None.
         """
 
         self.file_path = Path(file_path)
@@ -66,7 +69,8 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             drop_duplicates=drop_duplicates,
             n_bins=n_bins,
             transform=transform,
-            target_transform=target_transform
+            target_transform=target_transform,
+            fit_from=fit_from
         )
 
     def get_dataset_info(self) -> Dict[str, Union[str, int, float, list, Dict, None]]:

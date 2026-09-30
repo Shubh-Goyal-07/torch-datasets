@@ -285,3 +285,22 @@ class TestTabularDatasetFromCSVXLSX:
                 file_path=cls_csv,
                 target_cols='nonexistent_col',
             )
+
+
+class TestFitFromCSV:
+
+    def test_val_csv_reuses_train_preprocessing(self, tmp_path):
+        train_path, val_path = tmp_path / 'train.csv', tmp_path / 'val.csv'
+        pd.DataFrame({
+            'num': [0.0, 1.0, 2.0, 3.0],
+            'cat': ['A', 'B', 'C', 'A'],
+            'y': ['no', 'yes', 'no', 'yes'],
+        }).to_csv(train_path, index=False)
+        pd.DataFrame({'num': [10.0], 'cat': ['C'], 'y': ['yes']}).to_csv(val_path, index=False)
+
+        train = TabularDatasetFromCSVXLSX(train_path, target_cols='y')
+        val = TabularDatasetFromCSVXLSX(val_path, fit_from=train)
+
+        assert val.scaler is train.scaler
+        assert val.y.tolist() == [train.class_to_idx['yes']]
+        assert val.feature_cols == train.feature_cols
