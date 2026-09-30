@@ -28,8 +28,11 @@ classifiers = [
 ]
 
 dependencies = [
-  "torch>=2.0.0",
-  "torchvision>=0.15.0",
+  "torch>=2.1.0",
+  "torchvision>=0.16.0",
+  "torchaudio>=2.1.0",
+  "soundfile>=0.12.1",
+  "opencv-python-headless>=4.5.0",
   "Pillow>=9.0.0",
   "numpy>=1.22.0",
   "pandas>=1.5.0",

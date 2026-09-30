@@ -92,7 +92,7 @@ def _write_pattern_pair(tmp_path, h=8, w=10):
     pattern[h - 1, w - 1] = 255
     img_path, mask_path = tmp_path / "img.png", tmp_path / "mask.png"
     Image.fromarray(np.stack([pattern] * 3, axis=-1)).save(img_path)
-    Image.fromarray(pattern, mode="L").save(mask_path)
+    Image.fromarray(pattern).save(mask_path)
     return img_path, mask_path
 
 

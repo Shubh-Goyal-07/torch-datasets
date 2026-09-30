@@ -57,7 +57,7 @@ def tmp_mask_factory(tmp_path: Path):
         value: int = 128,
     ) -> Path:
         arr = np.full(size, value, dtype=np.uint8)
-        img = Image.fromarray(arr, mode="L")
+        img = Image.fromarray(arr)  # 2-D uint8 -> "L" (the mode= argument is removed in Pillow 13)
         path = tmp_path / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         img.save(path)

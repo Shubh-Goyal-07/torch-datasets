@@ -41,7 +41,7 @@ class BaseAudioClassificationDataset(Dataset):
         """
         return len(self.samples)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, Union[int, List[int]]] | Tuple[torch.Tensor, Union[int, List[int]], str]:
+    def __getitem__(self, idx: int) -> Union[Tuple[torch.Tensor, Union[int, List[int]]], Tuple[torch.Tensor, Union[int, List[int]], str]]:
         """Get a single sample from the dataset.
         
         Args:

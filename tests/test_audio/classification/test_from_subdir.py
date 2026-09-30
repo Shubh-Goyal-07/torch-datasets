@@ -3,7 +3,7 @@
 import torch
 import pytest
 
-torchaudio = pytest.importorskip("torchaudio")
+sf = pytest.importorskip("soundfile")
 
 from torchdatasets.audio.classification.from_subdir import AudioSubdirDataset
 
@@ -13,7 +13,7 @@ def _create_wav(path, sample_rate=16000, duration_ms=50, channels=1):
     n_samples = int(sample_rate * duration_ms / 1000)
     waveform = torch.randn(channels, n_samples)
     path.parent.mkdir(parents=True, exist_ok=True)
-    torchaudio.save(str(path), waveform, sample_rate)
+    sf.write(str(path), waveform.T.numpy(), sample_rate)
     return path
 
 

@@ -1,12 +1,14 @@
 """Tests for torchdatasets._internal.io.audio — audio loading utility."""
 
+import math
+
 import torch
 import pytest
 
 from torchdatasets._internal.io.audio import DEFAULT_AUDIO_EXTENSIONS, load_audio
 
-# Guard: torchaudio is needed for both the source module and these tests.
-torchaudio = pytest.importorskip("torchaudio")
+# Guard: soundfile is needed to write the test WAV files.
+sf = pytest.importorskip("soundfile")
 
 
 def _create_wav(path, sample_rate=16000, duration_ms=100, channels=1):
@@ -14,7 +16,7 @@ def _create_wav(path, sample_rate=16000, duration_ms=100, channels=1):
     n_samples = int(sample_rate * duration_ms / 1000)
     waveform = torch.randn(channels, n_samples)
     path.parent.mkdir(parents=True, exist_ok=True)
-    torchaudio.save(str(path), waveform, sample_rate)
+    sf.write(str(path), waveform.T.numpy(), sample_rate)
     return path, sample_rate, n_samples
 
 
@@ -61,6 +63,21 @@ class TestLoadAudio:
         path, _, _ = _create_wav(tmp_path / "test.wav", sample_rate=sr)
         waveform, returned_sr = load_audio(path, sample_rate=None)
         assert returned_sr == sr
+
+
+class TestDecoding:
+    """Decoding goes through soundfile, so it works without torchcodec."""
+
+    def test_flac_values_round_trip(self, tmp_path):
+        t = torch.arange(1600) / 16000
+        signal = (0.5 * torch.sin(2 * math.pi * 440 * t)).unsqueeze(0)
+        path = tmp_path / "tone.flac"
+        sf.write(str(path), signal.T.numpy(), 16000)
+        waveform, sr = load_audio(path)
+        assert sr == 16000
+        assert waveform.dtype == torch.float32
+        assert waveform.shape == signal.shape
+        assert torch.allclose(waveform, signal, atol=1e-3)
 
 
 class TestDefaultAudioExtensions:
