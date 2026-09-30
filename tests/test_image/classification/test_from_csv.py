@@ -1,5 +1,7 @@
 """Tests for ImageCSVXLSXDataset — loads images from CSV metadata files."""
 
+from pathlib import Path
+
 import pytest
 
 from torchdatasets.image.classification.from_csv import ImageCSVXLSXDataset
@@ -120,3 +122,26 @@ class TestFilteringAndErrors:
         csv_path = tmp_csv_factory("data.csv", [{"x": 1, "y": 2}])
         with pytest.raises(AssertionError, match="path.*label"):
             ImageCSVXLSXDataset(file_path=csv_path)
+
+
+class TestSampleAlignment:
+    def test_each_row_keeps_its_own_path_and_label(self, tmp_image_factory, tmp_csv_factory):
+        """Regression: every sample used to get the *last* row's image path."""
+        rows = [
+            ("red.png", (255, 0, 0), "a"),
+            ("green.png", (0, 255, 0), "b"),
+            ("blue.png", (0, 0, 255), "c"),
+        ]
+        paths = [tmp_image_factory(name, color=color) for name, color, _ in rows]
+        csv_path = tmp_csv_factory(
+            "data.csv",
+            [{"path": str(p), "label": lbl} for p, (_, _, lbl) in zip(paths, rows)],
+        )
+        ds = ImageCSVXLSXDataset(file_path=csv_path, return_path=True)
+
+        assert [Path(path) for path, _ in ds.samples] == paths
+        for i, (_, color, lbl) in enumerate(rows):
+            img, label, path = ds[i]
+            assert Path(path) == paths[i]
+            assert label == ds.class_to_idx[lbl]
+            assert img[0, 0].tolist() == list(color)

@@ -55,8 +55,10 @@ class BaseImageSegmentationDataset(Dataset):
         image_np = load_image(img_path)
         mask_np = load_mask(mask_path, is_binary=self.is_binary)
 
-        image = tv_tensors.Image(image_np).permute(2, 0, 1)
-        mask = tv_tensors.Mask(mask_np).unsqueeze(0)
+        # Reshape first, then wrap: ops like permute/unsqueeze on a tv_tensor return a
+        # plain Tensor, and v2 transforms would then skip the mask (misaligning it).
+        image = tv_tensors.Image(torch.from_numpy(image_np).permute(2, 0, 1))
+        mask = tv_tensors.Mask(torch.from_numpy(mask_np).unsqueeze(0))
 
         if self.transform:
             image, mask = self.transform(image, mask)

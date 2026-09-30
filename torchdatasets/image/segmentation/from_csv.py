@@ -57,7 +57,9 @@ class ImageSegCSVXLSXDataset(BaseImageSegmentationDataset):
             mask_path = (base_dir / str(row[self.mask_col])).resolve()
             
             # Check if the image and mask exist and have a valid extension
-            if ((img_path.suffix.lower() in self.extensions and img_path.is_file()) and (img_path.suffix.lower() in self.extensions and img_path.is_file())):
+            img_ok = img_path.suffix.lower() in self.extensions and img_path.is_file()
+            mask_ok = mask_path.suffix.lower() in self.extensions and mask_path.is_file()
+            if img_ok and mask_ok:
                 samples.append((img_path, mask_path))
 
         # Check if any valid samples were found

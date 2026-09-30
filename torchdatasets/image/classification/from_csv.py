@@ -78,4 +78,4 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
         classes = sorted(classes)
         self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
         
-        self.samples = [(img_path, self.encode_labels(labels)) for img_pth, labels in samples]
+        self.samples = [(img_path, self.encode_labels(labels)) for img_path, labels in samples]

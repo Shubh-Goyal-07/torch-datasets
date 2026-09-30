@@ -68,3 +68,48 @@ class TestErrors:
         csv_path = tmp_csv_factory("data.csv", [{"x": 1, "y": 2}])
         with pytest.raises(AssertionError, match="path.*label"):
             ImageSegCSVXLSXDataset(file_path=csv_path)
+
+
+class TestMaskValidation:
+    def test_rows_with_missing_mask_are_skipped(
+        self, tmp_path, tmp_image_factory, tmp_mask_factory, tmp_csv_factory
+    ):
+        """Regression: the mask path was never checked, so broken rows were kept."""
+        tmp_image_factory("images/ok.png")
+        mask_ok = tmp_mask_factory("masks/ok.png")
+        tmp_image_factory("images/orphan.png")
+        csv_path = tmp_csv_factory(
+            "data.csv",
+            [
+                {"path": "images/ok.png", "label": "masks/ok.png"},
+                {"path": "images/orphan.png", "label": "masks/missing.png"},
+            ],
+        )
+        ds = ImageSegCSVXLSXDataset(file_path=csv_path)
+        assert len(ds) == 1
+        assert ds.samples[0][1] == mask_ok.resolve()
+
+    def test_mask_with_invalid_extension_is_skipped(
+        self, tmp_path, tmp_image_factory, tmp_mask_factory, tmp_csv_factory
+    ):
+        tmp_image_factory("images/a.png")
+        tmp_mask_factory("masks/a.png")
+        tmp_image_factory("images/b.png")
+        (tmp_path / "masks" / "b.txt").write_text("not a mask")
+        csv_path = tmp_csv_factory(
+            "data.csv",
+            [
+                {"path": "images/a.png", "label": "masks/a.png"},
+                {"path": "images/b.png", "label": "masks/b.txt"},
+            ],
+        )
+        ds = ImageSegCSVXLSXDataset(file_path=csv_path)
+        assert len(ds) == 1
+
+    def test_all_masks_missing_raises(self, tmp_path, tmp_image_factory, tmp_csv_factory):
+        tmp_image_factory("images/a.png")
+        csv_path = tmp_csv_factory(
+            "data.csv", [{"path": "images/a.png", "label": "masks/missing.png"}]
+        )
+        with pytest.raises(AssertionError, match="No valid entries"):
+            ImageSegCSVXLSXDataset(file_path=csv_path)

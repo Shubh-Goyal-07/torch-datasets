@@ -51,8 +51,9 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
         # iterate over all files in the source directory
         for img_path in self.src_dir.glob("*"):
 
-            # skip files with the suffix
-            if self.suffix in img_path.stem:
+            # skip mask files (stem ends with the suffix); a name that merely
+            # contains the suffix elsewhere is still a valid image
+            if img_path.stem.endswith(self.suffix):
                 continue
             
             # skip files that are not images or do not have the correct extension

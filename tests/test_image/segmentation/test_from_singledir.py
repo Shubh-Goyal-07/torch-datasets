@@ -46,3 +46,16 @@ class TestErrors:
             ImageSegSingleDirDataset(
                 src_dir=tmp_path / "dir", suffix="_mask"
             )
+
+
+class TestSuffixMatching:
+    def test_image_name_containing_suffix_is_kept(
+        self, tmp_path, tmp_image_factory, tmp_mask_factory
+    ):
+        """Regression: any image whose name *contained* the suffix was dropped."""
+        for name in ["img_mask_scan", "b"]:
+            tmp_image_factory(f"seg/{name}.png")
+            tmp_mask_factory(f"seg/{name}_mask.png")
+        ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")
+        assert sorted(img.name for img, _ in ds.samples) == ["b.png", "img_mask_scan.png"]
+        assert all(mask.stem.endswith("_mask") for _, mask in ds.samples)
