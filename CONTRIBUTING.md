@@ -32,9 +32,12 @@ Create a test file in `tests/` that mirrors the source path:
 
 | Source | Test |
 |---|---|
-| `torchdatasets/image/classification/from_csv.py` | `tests/test_image/test_classification_csv.py` |
-| `torchdatasets/tabular/regression/from_csv.py` | `tests/test_tabular/test_regression_csv.py` |
-| `torchdatasets/audio/classification/from_subdir.py` | `tests/test_audio/test_classification_subdir.py` |
+| `torchdatasets/image/classification/from_csv.py` | `tests/test_image/classification/test_from_csv.py` |
+| `torchdatasets/tabular/from_csv.py` | `tests/test_tabular/from_csv/test_from_csv.py` |
+| `torchdatasets/audio/classification/from_subdir.py` | `tests/test_audio/classification/test_from_subdir.py` |
+
+Every test folder needs an (empty) `__init__.py`, so that test files with the same name in
+different folders (e.g. several `test_from_csv.py`) don't clash.
 
 ### What to Test
 
@@ -47,7 +50,7 @@ At minimum, every new dataset class must test:
 
 ### How to Create Test Data
 
-Use **fixtures from `tests/conftest.py`** to create synthetic test data (tiny images, generated WAV files, CSV files). **Never commit real datasets** to the repository.
+Use **fixtures from `tests/conftest.py`** to create synthetic test data (tiny images, masks, CSV files); the audio tests write short WAV files with `soundfile`. **Never commit real datasets** to the repository.
 
 ```python
 def test_my_dataset(tmp_image_factory, tmp_csv_factory):
@@ -64,7 +67,7 @@ def test_my_dataset(tmp_image_factory, tmp_csv_factory):
 pytest
 
 # Run a specific test file
-pytest tests/test_image/test_classification_subdir.py
+pytest tests/test_image/classification/test_from_subdir.py
 
 # Run with coverage report
 pytest --cov=torchdatasets --cov-report=term-missing
