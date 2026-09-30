@@ -59,3 +59,41 @@ class TestSuffixMatching:
         ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")
         assert sorted(img.name for img, _ in ds.samples) == ["b.png", "img_mask_scan.png"]
         assert all(mask.stem.endswith("_mask") for _, mask in ds.samples)
+
+
+class TestMaskExtensions:
+    def test_jpg_image_with_png_mask(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        """Regression: masks had to share the image's extension, so a.jpg + a_mask.png never paired."""
+        tmp_image_factory("seg/a.jpg")
+        tmp_mask_factory("seg/a_mask.png")
+        tmp_image_factory("seg/b.png")
+        tmp_mask_factory("seg/b_mask.png")
+        ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")
+        assert [(img.name, mask.name) for img, mask in ds.samples] == [
+            ("a.jpg", "a_mask.png"),
+            ("b.png", "b_mask.png"),
+        ]
+
+    def test_prefers_mask_with_same_extension(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        tmp_image_factory("seg/a.png")
+        tmp_mask_factory("seg/a_mask.bmp")
+        tmp_mask_factory("seg/a_mask.png")
+        ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")
+        assert ds.samples[0][1].name == "a_mask.png"
+
+    def test_mask_extensions_order_and_filter(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        tmp_image_factory("seg/a.jpg")
+        tmp_mask_factory("seg/a_mask.png")
+        tmp_mask_factory("seg/a_mask.bmp")
+        ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask", mask_extensions=[".BMP", ".png"])
+        assert ds.samples[0][1].name == "a_mask.bmp"
+
+        with pytest.raises(AssertionError, match="No valid samples"):
+            ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask", mask_extensions=[".tiff"])
+
+    def test_mixed_extension_pair_loads(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        tmp_image_factory("seg/a.jpg", size=(8, 6))
+        tmp_mask_factory("seg/a_mask.png", size=(6, 8))  # masks take (H, W)
+        image, mask = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")[0]
+        assert image.shape == (3, 6, 8)
+        assert mask.shape == (1, 6, 8)

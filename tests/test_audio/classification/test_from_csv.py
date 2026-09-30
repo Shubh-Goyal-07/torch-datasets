@@ -120,3 +120,14 @@ class TestErrors:
         csv_path = tmp_csv_factory("data.csv", [{"x": 1, "y": 2}])
         with pytest.raises(AssertionError, match="path.*label"):
             AudioCSVXLSXDataset(file_path=csv_path)
+
+
+class TestExcelFile:
+    def test_loads_xlsx(self, tmp_path):
+        pd = pytest.importorskip("pandas")
+        p1, p2 = _create_wav(tmp_path / "a.wav"), _create_wav(tmp_path / "b.wav")
+        xlsx_path = tmp_path / "data.xlsx"
+        pd.DataFrame({"path": [str(p1), str(p2)], "label": ["speech", "music"]}).to_excel(xlsx_path, index=False)
+        ds = AudioCSVXLSXDataset(file_path=xlsx_path)
+        assert len(ds) == 2
+        assert ds.class_to_idx == {"music": 0, "speech": 1}

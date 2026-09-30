@@ -113,3 +113,14 @@ class TestMaskValidation:
         )
         with pytest.raises(AssertionError, match="No valid entries"):
             ImageSegCSVXLSXDataset(file_path=csv_path)
+
+
+class TestExcelFile:
+    def test_loads_xlsx(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        pd = pytest.importorskip("pandas")
+        tmp_image_factory("images/a.png")
+        tmp_mask_factory("masks/a.png")
+        xlsx_path = tmp_path / "data.xlsx"
+        pd.DataFrame({"path": ["images/a.png"], "label": ["masks/a.png"]}).to_excel(xlsx_path, index=False)
+        ds = ImageSegCSVXLSXDataset(file_path=xlsx_path)
+        assert len(ds) == 1

@@ -51,3 +51,48 @@ class TestErrors:
                 image_dir=tmp_path / "imgs",
                 mask_dir=tmp_path / "msks",
             )
+
+
+class TestMaskExtensions:
+    def test_jpg_image_with_png_mask(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        """Regression: masks had to share the image's extension, so x.jpg + x.png never paired."""
+        tmp_image_factory("imgs/a.jpg")
+        tmp_image_factory("imgs/b.jpg")
+        tmp_mask_factory("msks/a.png")
+        tmp_mask_factory("msks/b_mask.png")
+        ds = ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks")
+        assert [(img.name, mask.name) for img, mask in ds.samples] == [("a.jpg", "a.png")]
+
+        ds = ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks", suffix="_mask")
+        assert [(img.name, mask.name) for img, mask in ds.samples] == [("b.jpg", "b_mask.png")]
+
+    def test_prefers_mask_with_same_extension(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        tmp_image_factory("imgs/a.png")
+        tmp_mask_factory("msks/a.bmp")
+        tmp_mask_factory("msks/a.png")
+        ds = ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks")
+        assert ds.samples[0][1].name == "a.png"
+
+    def test_mask_extensions_order_and_filter(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        tmp_image_factory("imgs/a.jpg")
+        tmp_mask_factory("msks/a.png")
+        tmp_mask_factory("msks/a.bmp")
+        ds = ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks", mask_extensions=[".BMP", ".png"])
+        assert ds.samples[0][1].name == "a.bmp"
+
+        with pytest.raises(AssertionError, match="No valid samples"):
+            ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks", mask_extensions=[".tiff"])
+
+    def test_uppercase_mask_extension(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        tmp_image_factory("imgs/a.jpg")
+        mask = tmp_mask_factory("msks/a.png")
+        mask.rename(mask.with_suffix(".PNG"))
+        ds = ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks")
+        assert ds.samples[0][1].name == "a.PNG"
+
+    def test_mixed_extension_pair_loads(self, tmp_path, tmp_image_factory, tmp_mask_factory):
+        tmp_image_factory("imgs/a.jpg", size=(8, 6))
+        tmp_mask_factory("msks/a.png", size=(6, 8))  # masks take (H, W)
+        image, mask = ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks")[0]
+        assert image.shape == (3, 6, 8)
+        assert mask.shape == (1, 6, 8)

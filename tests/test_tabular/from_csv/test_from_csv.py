@@ -304,3 +304,25 @@ class TestFitFromCSV:
         assert val.scaler is train.scaler
         assert val.y.tolist() == [train.class_to_idx['yes']]
         assert val.feature_cols == train.feature_cols
+
+
+class TestExcelFiles:
+
+    def test_excel_file_matches_csv(self, tmp_path):
+        """The same data read from .xlsx and .csv must give identical tensors."""
+        df = pd.DataFrame({
+            'num': [0.5, 1.5, 2.5, 3.5],
+            'cat': ['A', 'B', 'A', 'C'],
+            'y': ['no', 'yes', 'no', 'yes'],
+        })
+        csv_path, xlsx_path = tmp_path / 'data.csv', tmp_path / 'data.xlsx'
+        df.to_csv(csv_path, index=False)
+        df.to_excel(xlsx_path, index=False)
+
+        from_csv = TabularDatasetFromCSVXLSX(csv_path, target_cols='y')
+        from_xlsx = TabularDatasetFromCSVXLSX(xlsx_path, target_cols='y')
+
+        assert torch.equal(from_xlsx.X, from_csv.X)
+        assert torch.equal(from_xlsx.y, from_csv.y)
+        assert from_xlsx.class_to_idx == from_csv.class_to_idx
+        assert from_xlsx.get_dataset_info()['file_path'] == str(xlsx_path)

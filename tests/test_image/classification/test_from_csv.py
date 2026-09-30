@@ -144,4 +144,15 @@ class TestSampleAlignment:
             img, label, path = ds[i]
             assert Path(path) == paths[i]
             assert label == ds.class_to_idx[lbl]
-            assert img[0, 0].tolist() == list(color)
+            assert img[:, 0, 0].tolist() == list(color)
+
+
+class TestExcelFile:
+    def test_loads_xlsx(self, tmp_path, tmp_image_factory):
+        pd = pytest.importorskip("pandas")
+        p1, p2 = tmp_image_factory("a.png"), tmp_image_factory("b.png")
+        xlsx_path = tmp_path / "data.xlsx"
+        pd.DataFrame({"path": [str(p1), str(p2)], "label": ["cat", "dog"]}).to_excel(xlsx_path, index=False)
+        ds = ImageCSVXLSXDataset(file_path=xlsx_path)
+        assert len(ds) == 2
+        assert ds.class_to_idx == {"cat": 0, "dog": 1}
