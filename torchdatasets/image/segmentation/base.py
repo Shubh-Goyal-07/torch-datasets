@@ -1,8 +1,9 @@
 import torch
 import numpy as np
+from pathlib import Path
 from PIL import Image
 from torchvision import tv_tensors
-from typing import Optional, Callable, List, Tuple, Union
+from typing import Dict, Optional, Callable, List, Tuple, Union
 from torch.utils.data import Dataset
 
 from torchdatasets._internal.io.image import DEFAULT_IMAGE_EXTENSIONS, load_image, load_mask
@@ -67,6 +68,41 @@ class BaseImageSegmentationDataset(Dataset):
             return image, mask, str(img_path)
         
         return image, mask
+
+    @staticmethod
+    def _index_masks(mask_dir: Path, mask_extensions: List[str]) -> Dict[str, Dict[str, Path]]:
+        """Index the mask files of a directory by name.
+
+        Args:
+            mask_dir (Path): Directory containing the masks.
+            mask_extensions (List[str]): Allowed mask extensions (lower-case).
+
+        Returns:
+            Dict[str, Dict[str, Path]]: Mask file stem -> {lower-case extension: path}.
+        """
+        masks: Dict[str, Dict[str, Path]] = {}
+        for mask_path in mask_dir.iterdir():
+            mask_ext = mask_path.suffix.lower()
+            if mask_path.is_file() and mask_ext in mask_extensions:
+                masks.setdefault(mask_path.stem, {})[mask_ext] = mask_path
+        return masks
+
+    @staticmethod
+    def _pick_mask(img_path: Path, candidates: Dict[str, Path], mask_extensions: List[str]) -> Path:
+        """Choose between masks that share a name but differ in extension.
+
+        Args:
+            img_path (Path): The image the mask belongs to.
+            candidates (Dict[str, Path]): Lower-case extension -> mask path.
+            mask_extensions (List[str]): Allowed mask extensions, in order of preference.
+
+        Returns:
+            Path: The mask with the image's own extension if there is one, otherwise the first in mask_extensions order.
+        """
+        img_ext = img_path.suffix.lower()
+        if img_ext in candidates:
+            return candidates[img_ext]
+        return next(candidates[ext] for ext in mask_extensions if ext in candidates)
 
     def _load_samples(self) -> None:
         """To be implemented in the children classes.

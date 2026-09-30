@@ -1,5 +1,6 @@
 import torch
 from collections import defaultdict
+from torchvision import tv_tensors
 from typing import List, Optional, Callable, Tuple, Dict, Union
 from torch.utils.data import Dataset
 
@@ -18,7 +19,9 @@ class BaseImageClassificationDataset(Dataset):
         """Initialize the dataset.
 
         Args:
-            transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
+            transform (Optional[Callable], optional): Optional transform to be applied to the images. It receives a
+                ``tv_tensors.Image`` (uint8, shape [3, H, W]), so use ``torchvision.transforms.v2`` (e.g. ``v2.Resize``,
+                ``v2.ToDtype(torch.float32, scale=True)``) rather than ``ToTensor``. Defaults to None.
             return_path (bool, optional): Whether to return the path to the image. Defaults to False.
             extensions (Optional[List[str]], optional): Optional list of image extensions. Defaults to None.
         """
@@ -31,7 +34,7 @@ class BaseImageClassificationDataset(Dataset):
         self.samples: List[Tuple[str, Union[int, List[int]]]] = []
         self.class_to_idx: Dict[str, int] = {}
         self.idx_to_class: Dict[int, str] = {}
-        self.class_count: Dict[str, int] = {}
+        self.class_count: Dict[int, int] = {}
 
     def __len__(self) -> int:
         """Return the number of samples in the dataset.
@@ -48,16 +51,18 @@ class BaseImageClassificationDataset(Dataset):
             idx (int): Index of the sample to retrieve.
 
         Returns:
-            Tuple[torch.Tensor, Union[int, List[int]]] | Tuple[torch.Tensor, Union[int, List[int]], str]: Image as torch.Tensor and its label. If return_path is True, returns the path to the image.
+            Union[Tuple[torch.Tensor, Union[int, List[int]]], Tuple[torch.Tensor, Union[int, List[int]], str]]: The image
+            (a ``tv_tensors.Image``, uint8 [3, H, W], unless the transform changes it) and its label (class index, or list
+            of class indices for multi-label). If return_path is True, the image path (str) is appended.
         """
         path, label = self.samples[idx]
-        img = load_image(path)
+        img = tv_tensors.Image(torch.from_numpy(load_image(path)).permute(2, 0, 1))
         
         if self.transform:
             img = self.transform(img)
 
         if self.return_path:
-            return img, label, path
+            return img, label, str(path)
         return img, label
 
     def encode_labels(self, lbl: Union[str, List[str]]) -> Union[int, List[int]]:
@@ -84,7 +89,8 @@ class BaseImageClassificationDataset(Dataset):
     def create_metadata(self) -> None:
         """Create metadata for the dataset, it includes:
         1. idx_to_class: Dictionary mapping class indices to class names.
-        2. class_count: Dictionary mapping class names to the number of samples in each class.
+        2. class_count: Dictionary mapping class indices to the number of samples in each class
+           (use idx_to_class to get the names).
         """
         self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
         count = defaultdict(int)
