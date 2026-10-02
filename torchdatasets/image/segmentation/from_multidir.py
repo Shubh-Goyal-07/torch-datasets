@@ -54,13 +54,19 @@ class ImageSegMultidirDataset(BaseImageSegmentationDataset):
         self.mask_extensions = [ext.lower() for ext in (mask_extensions or DEFAULT_IMAGE_EXTENSIONS)]
         self._load_samples()
 
-    def _load_samples(self):
-        """Load the samples from the directory."""
+    def _load_samples(self) -> None:
+        """Load the samples from the directories.
 
-        # assert the source directory exists
-        assert self.image_dir.exists(), "Image directory does not exist."
-        assert self.mask_dir.exists(), "Mask directory does not exist."
-        
+        Raises:
+            FileNotFoundError: If a directory does not exist or no image has a matching mask.
+        """
+
+        # check the source directories exist
+        if not self.image_dir.is_dir():
+            raise FileNotFoundError(f"Image directory not found: '{self.image_dir}'")
+        if not self.mask_dir.is_dir():
+            raise FileNotFoundError(f"Mask directory not found: '{self.mask_dir}'")
+
         samples: List[tuple[Path, Path]] = []
 
         # index the mask directory once: mask stem -> {extension: path}
@@ -81,7 +87,12 @@ class ImageSegMultidirDataset(BaseImageSegmentationDataset):
             # prefer a mask with the image's own extension, otherwise follow mask_extensions order
             samples.append((img_path, self._pick_mask(img_path, candidates, self.mask_extensions)))
         
-        # assert that at least one sample was found
-        assert len(samples) > 0, "No valid samples found in the dataset."
+        # check that at least one sample was found
+        if not samples:
+            raise FileNotFoundError(
+                f"No image/mask pairs found: looked for images with extensions {sorted(self.extensions)} "
+                f"in '{self.image_dir}' and masks named <image name>{self.suffix or ''} with extensions "
+                f"{self.mask_extensions} in '{self.mask_dir}'."
+            )
 
         self.samples = samples

@@ -1,9 +1,8 @@
 from pathlib import Path
-import pandas as pd
 from typing import List, Optional, Callable, Union
 
 from torchdatasets.image.classification.base import BaseImageClassificationDataset
-from torchdatasets._internal.io.common import load_csv_or_excel
+from torchdatasets._internal.io.common import load_csv_or_excel, require_columns
 
 
 class ImageCSVXLSXDataset(BaseImageClassificationDataset):
@@ -45,12 +44,17 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
         self.create_metadata()
 
     def _load_samples(self) -> None:
-        """Load samples from the CSV or Excel file."""
+        """Load samples from the CSV or Excel file.
+
+        Raises:
+            ValueError: If the file lacks path_col or label_col.
+            FileNotFoundError: If no row points to an existing image with an allowed extension.
+        """
 
         df = load_csv_or_excel(self.file_path)
 
         # Check if the required columns are present in the DataFrame
-        assert self.path_col in df.columns and self.label_col in df.columns, f"File must contain '{self.path_col}' and '{self.label_col}' columns."
+        require_columns(df, [self.path_col, self.label_col], self.file_path)
 
         samples: List[tuple[Path, Union[str, List[str]]]] = []
         classes: set[str] = set()
@@ -72,7 +76,12 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
                 classes.update(labels)
 
         # Check if any valid samples were found
-        assert len(samples) > 0, "No valid image entries found in CSV/XLSX."
+        if not samples:
+            raise FileNotFoundError(
+                f"No valid entries in '{self.file_path}': none of its {len(df)} row(s) points to an existing "
+                f"image with extensions {sorted(self.extensions)}. Paths are used as written, so relative "
+                "paths are resolved from the current working directory."
+            )
 
         # Sort classes and create class_to_idx mapping
         classes = sorted(classes)

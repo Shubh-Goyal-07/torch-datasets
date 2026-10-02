@@ -1,7 +1,5 @@
 import torch
-import numpy as np
 from pathlib import Path
-from PIL import Image
 from torchvision import tv_tensors
 from typing import Dict, Optional, Callable, List, Tuple, Union
 from torch.utils.data import Dataset
@@ -32,7 +30,7 @@ class BaseImageSegmentationDataset(Dataset):
         self.return_path = return_path
         self.is_binary = is_binary
         self.extensions = set(ext.lower() for ext in (extensions or DEFAULT_IMAGE_EXTENSIONS))
-        self.samples: List[Tuple[str, int]] = []
+        self.samples: List[Tuple[Path, Path]] = []  # (image path, mask path)
         
     def __len__(self):
         """Return the number of samples in the dataset.

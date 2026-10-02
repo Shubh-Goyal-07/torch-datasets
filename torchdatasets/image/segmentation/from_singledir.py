@@ -43,6 +43,8 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
             mask_extensions (Optional[List[str]], optional): Extensions a mask file may have, in order of preference.
                 Defaults to None (the default image extensions).
         """
+        if not suffix:
+            raise ValueError("suffix must be a non-empty string, e.g. '_mask' for img.png + img_mask.png.")
         super().__init__(transform=transform, return_path=return_path, extensions=extensions, is_binary=is_binary)
         self.src_dir = Path(src_dir)
         self.suffix = suffix
@@ -50,10 +52,15 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
         self._load_samples()
 
     def _load_samples(self) -> None:
-        """Load the samples from the directory."""
+        """Load the samples from the directory.
 
-        # assert the source directory exists
-        assert self.src_dir.exists(), "Source directory does not exist."
+        Raises:
+            FileNotFoundError: If the directory does not exist or no image has a matching mask.
+        """
+
+        # check the source directory exists
+        if not self.src_dir.is_dir():
+            raise FileNotFoundError(f"Directory not found: '{self.src_dir}'")
 
         samples: List[tuple[Path, Path]] = []
 
@@ -81,7 +88,12 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
             # prefer a mask with the image's own extension, otherwise follow mask_extensions order
             samples.append((img_path, self._pick_mask(img_path, candidates, self.mask_extensions)))
         
-        # assert that at least one sample was found
-        assert len(samples) > 0, "No valid samples found in the dataset."
-        
+        # check that at least one sample was found
+        if not samples:
+            raise FileNotFoundError(
+                f"No image/mask pairs found in '{self.src_dir}': looked for images with extensions "
+                f"{sorted(self.extensions)} and masks named <image name>{self.suffix} with extensions "
+                f"{self.mask_extensions}."
+            )
+
         self.samples = samples

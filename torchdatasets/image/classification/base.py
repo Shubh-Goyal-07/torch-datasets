@@ -1,5 +1,6 @@
 import torch
 from collections import defaultdict
+from pathlib import Path
 from torchvision import tv_tensors
 from typing import List, Optional, Callable, Tuple, Dict, Union
 from torch.utils.data import Dataset
@@ -31,10 +32,23 @@ class BaseImageClassificationDataset(Dataset):
         # If no extensions are provided, use default image extensions, also convert to lowercase for consistent lookup
         self.extensions = set(ext.lower() for ext in (extensions or DEFAULT_IMAGE_EXTENSIONS))
         
-        self.samples: List[Tuple[str, Union[int, List[int]]]] = []
+        self.samples: List[Tuple[Path, Union[int, List[int]]]] = []
         self.class_to_idx: Dict[str, int] = {}
         self.idx_to_class: Dict[int, str] = {}
         self.class_count: Dict[int, int] = {}
+
+    @property
+    def targets(self) -> List[Union[int, List[int]]]:
+        """Label of every sample, in index order, without loading any images.
+
+        ``targets[i]`` is the label ``dataset[i]`` returns: a class index, or a list of class
+        indices for multi-label datasets. The list is rebuilt from ``samples`` on each access,
+        so keep a reference if you need it more than once.
+
+        Returns:
+            List[Union[int, List[int]]]: One label per sample.
+        """
+        return [label for _, label in self.samples]
 
     def __len__(self) -> int:
         """Return the number of samples in the dataset.
