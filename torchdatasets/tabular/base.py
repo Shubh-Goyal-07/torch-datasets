@@ -112,6 +112,23 @@ class BaseTabularDataset(Dataset):
         self._scaled_cols = list(other._scaled_cols)
         self._is_fitted = True
 
+    @property
+    def targets(self) -> list:
+        """Target of every sample, in index order, as plain Python values.
+
+        ``targets[i]`` is the target ``dataset[i]`` returns (before ``target_transform``): a
+        class index for single-column classification, a list of 0/1 indicators for multi-column
+        classification, and a float (or a list of floats for several target columns) for
+        regression. The list is rebuilt from ``y`` on each access, so keep a reference if you
+        need it more than once.
+
+        Returns:
+            list: One target per sample (empty if the dataset has not been built).
+        """
+        if self.y is None:
+            return []
+        return self.y.tolist()
+
     def __len__(self) -> int:
         """Return the number of samples in the dataset.
 

@@ -29,7 +29,7 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
         scaling_type: Optional[str] = 'standard',
         scaling_features: Optional[List[str]] = None,
         encode_categorical: Optional[bool] = True,
-        drop_duplicates: Optional[bool] = True,
+        drop_duplicates: Optional[bool] = False,
         n_bins: Optional[int] = 0,
         # Transform options
         transform: Optional[Callable] = None,
@@ -49,7 +49,7 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
             scaling_type: Type of scaling ('standard', 'minmax', 'none'; None is treated as 'none')
             scaling_features: List of specific features to scale (None = all numeric)
             encode_categorical: Whether to encode categorical variables
-            drop_duplicates: Whether to remove duplicate rows
+            drop_duplicates: Whether to remove duplicate rows (default False: every row is kept)
             n_bins: Number of bins to use for discretization. Only applicable when task is 'classification'
             transform: Optional transform for features
             target_transform: Optional transform for targets

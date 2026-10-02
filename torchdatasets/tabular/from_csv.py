@@ -1,5 +1,3 @@
-import torch
-import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Optional, Callable, Union
 
@@ -22,7 +20,7 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             scaling_type: Optional[str] = 'standard',
             scaling_features: Optional[List[str]] = None,
             encode_categorical: Optional[bool] = True,
-            drop_duplicates: Optional[bool] = True,
+            drop_duplicates: Optional[bool] = False,
             n_bins: Optional[int] = 0,
             # Transform options
             transform: Optional[Callable] = None,
@@ -41,7 +39,7 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             scaling_type (str, optional): Type of scaling to apply, options ['standard', 'minmax', 'none'] (None is treated as 'none'). Defaults to 'standard'.
             scaling_features (Optional[List[str]], optional): List of features to scale. Defaults to None. If None, all numerical features will be scaled.
             encode_categorical (bool, optional): Whether to encode categorical features. Defaults to True.
-            drop_duplicates (bool, optional): Whether to drop duplicate rows. Defaults to True.
+            drop_duplicates (bool, optional): Whether to drop duplicate rows. Defaults to False.
             n_bins (int, optional): Number of bins to use for discretization. Defaults to 0. Only applicable when task is 'classification', otherwise it will be ignored.
             transform (Optional[Callable], optional): Optional transform to be applied to the features. Defaults to None.
             target_transform (Optional[Callable], optional): Optional transform to be applied to the targets. Defaults to None.
