@@ -61,10 +61,27 @@ class TestExtensionFilter:
 class TestErrorCases:
     def test_empty_dir_raises(self, tmp_path):
         (tmp_path / "empty_class").mkdir()
-        with pytest.raises(AssertionError, match="No valid samples"):
+        with pytest.raises(FileNotFoundError, match="No files with extensions"):
             ImageSubdirDataset(root_dir=tmp_path)
 
     def test_no_matching_extensions(self, tmp_path, tmp_image_factory):
         tmp_image_factory("cls/a.png")
-        with pytest.raises(AssertionError, match="No valid samples"):
+        with pytest.raises(FileNotFoundError, match=r"No files with extensions \['.bmp'\]"):
             ImageSubdirDataset(root_dir=tmp_path, extensions=[".bmp"])
+
+    def test_no_class_folders_raises(self, tmp_path, tmp_image_factory):
+        tmp_image_factory("loose.png")
+        with pytest.raises(FileNotFoundError, match="No class folders"):
+            ImageSubdirDataset(root_dir=tmp_path)
+
+    def test_missing_root_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="Directory not found"):
+            ImageSubdirDataset(root_dir=tmp_path / "nope")
+
+
+class TestOrdering:
+    def test_samples_are_sorted_within_each_class(self, tmp_path, tmp_image_factory):
+        for name in ["c.png", "a.png", "b.png"]:
+            tmp_image_factory(f"cls/{name}")
+        ds = ImageSubdirDataset(root_dir=tmp_path)
+        assert [p.name for p, _ in ds.samples] == ["a.png", "b.png", "c.png"]

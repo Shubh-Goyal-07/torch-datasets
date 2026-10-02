@@ -42,10 +42,20 @@ class TestReturnPath:
 class TestErrors:
     def test_no_masks_found_raises(self, tmp_path, tmp_image_factory):
         tmp_image_factory("dir/a.png")
-        with pytest.raises(AssertionError, match="No valid samples"):
+        with pytest.raises(FileNotFoundError, match="No image/mask pairs found"):
             ImageSegSingleDirDataset(
                 src_dir=tmp_path / "dir", suffix="_mask"
             )
+
+    def test_missing_dir_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="Directory not found"):
+            ImageSegSingleDirDataset(src_dir=tmp_path / "nope", suffix="_mask")
+
+    def test_empty_suffix_raises(self, tmp_path, tmp_image_factory):
+        """With no suffix, masks can't be told apart from images."""
+        tmp_image_factory("dir/a.png")
+        with pytest.raises(ValueError, match="suffix"):
+            ImageSegSingleDirDataset(src_dir=tmp_path / "dir", suffix="")
 
 
 class TestSuffixMatching:
@@ -88,7 +98,7 @@ class TestMaskExtensions:
         ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask", mask_extensions=[".BMP", ".png"])
         assert ds.samples[0][1].name == "a_mask.bmp"
 
-        with pytest.raises(AssertionError, match="No valid samples"):
+        with pytest.raises(FileNotFoundError, match="No image/mask pairs found"):
             ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask", mask_extensions=[".tiff"])
 
     def test_mixed_extension_pair_loads(self, tmp_path, tmp_image_factory, tmp_mask_factory):

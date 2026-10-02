@@ -115,12 +115,17 @@ class TestFilteringAndErrors:
             "data.csv",
             [{"path": str(tmp_path / "missing.png"), "label": "cat"}],
         )
-        with pytest.raises(AssertionError, match="No valid image entries"):
+        with pytest.raises(FileNotFoundError, match="No valid entries"):
             ImageCSVXLSXDataset(file_path=csv_path)
 
     def test_missing_columns_raises(self, tmp_path, tmp_csv_factory):
         csv_path = tmp_csv_factory("data.csv", [{"x": 1, "y": 2}])
-        with pytest.raises(AssertionError, match="path.*label"):
+        with pytest.raises(ValueError, match="path.*label"):
+            ImageCSVXLSXDataset(file_path=csv_path)
+
+    def test_missing_columns_error_lists_found_columns(self, tmp_path, tmp_csv_factory):
+        csv_path = tmp_csv_factory("data.csv", [{"path": "a.png", "class": "cat"}])
+        with pytest.raises(ValueError, match=r"missing: \['label'\].*found: \['path', 'class'\]"):
             ImageCSVXLSXDataset(file_path=csv_path)
 
 

@@ -82,5 +82,22 @@ class TestExtensionFilter:
 class TestErrors:
     def test_empty_dir_raises(self, tmp_path):
         (tmp_path / "empty_class").mkdir()
-        with pytest.raises(AssertionError, match="No valid samples"):
+        with pytest.raises(FileNotFoundError, match="No files with extensions"):
             AudioSubdirDataset(root_dir=tmp_path)
+
+    def test_no_class_folders_raises(self, tmp_path):
+        _create_wav(tmp_path / "loose.wav")
+        with pytest.raises(FileNotFoundError, match="No class folders"):
+            AudioSubdirDataset(root_dir=tmp_path)
+
+    def test_missing_root_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="Directory not found"):
+            AudioSubdirDataset(root_dir=tmp_path / "nope")
+
+
+class TestOrdering:
+    def test_samples_are_sorted_within_each_class(self, tmp_path):
+        for name in ["c.wav", "a.wav", "b.wav"]:
+            _create_wav(tmp_path / "cls" / name)
+        ds = AudioSubdirDataset(root_dir=tmp_path)
+        assert [p.name for p, _ in ds.samples] == ["a.wav", "b.wav", "c.wav"]

@@ -276,6 +276,51 @@ class TestDropDuplicates:
         )
         assert len(dataset) == 3
 
+    def test_default_keeps_duplicate_rows(self):
+        """Duplicates are only dropped on request, same default as BaseTabularDataset."""
+        df = pd.DataFrame({'f1': [1.0, 1.0, 2.0], 'target': [0, 0, 1]})
+        dataset = TabularDatasetFromDataFrame(df, target_cols='target')
+        assert len(dataset) == 3
+        assert dataset.drop_duplicates is False
+
+    def test_fit_from_does_not_drop_val_duplicates_by_default(self):
+        train = pd.DataFrame({'f1': [1.0, 2.0, 3.0], 'target': [0, 1, 1]})
+        val = pd.DataFrame({'f1': [2.0, 2.0], 'target': [1, 1]})
+        train_ds = TabularDatasetFromDataFrame(train, target_cols='target')
+        val_ds = TabularDatasetFromDataFrame(val, fit_from=train_ds)
+        assert len(val_ds) == 2
+
+
+# ---------------------------------------------------------------------------
+# Targets
+# ---------------------------------------------------------------------------
+
+class TestTargets:
+
+    def test_class_targets_match_getitem(self):
+        df = pd.DataFrame({'f1': [0.1, 0.2, 0.3, 0.4], 'label': ['dog', 'cat', 'dog', 'bird']})
+        dataset = TabularDatasetFromDataFrame(df, target_cols='label')
+        targets = dataset.targets
+        assert targets == [dataset.class_to_idx[v] for v in ['dog', 'cat', 'dog', 'bird']]
+        assert all(type(t) is int for t in targets)
+        assert targets == [int(dataset[i][1]) for i in range(len(dataset))]
+
+    def test_regression_targets_are_floats(self):
+        df = pd.DataFrame({'f1': [0.1, 0.2], 'y': [1.5, 2.5]})
+        dataset = TabularDatasetFromDataFrame(df, target_cols='y', task='regression')
+        assert dataset.targets == [1.5, 2.5]
+
+    def test_multi_column_targets_are_lists(self):
+        df = pd.DataFrame({'f1': [0.1, 0.2], 'a': [1, 0], 'b': [0, 1]})
+        dataset = TabularDatasetFromDataFrame(df, target_cols=['a', 'b'])
+        assert dataset.targets == [[1.0, 0.0], [0.0, 1.0]]
+
+    def test_targets_ignore_target_transform(self):
+        df = pd.DataFrame({'f1': [0.1, 0.2], 'label': [0, 1]})
+        dataset = TabularDatasetFromDataFrame(df, target_cols='label', target_transform=lambda y: y + 10)
+        assert dataset.targets == [0, 1]
+        assert int(dataset[1][1]) == 11
+
 
 # ---------------------------------------------------------------------------
 # Multi-column targets

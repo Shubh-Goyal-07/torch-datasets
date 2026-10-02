@@ -46,11 +46,21 @@ class TestErrors:
     def test_no_matching_masks_raises(self, tmp_path, tmp_image_factory):
         tmp_image_factory("imgs/a.png")
         (tmp_path / "msks").mkdir()
-        with pytest.raises(AssertionError, match="No valid samples"):
+        with pytest.raises(FileNotFoundError, match="No image/mask pairs found"):
             ImageSegMultidirDataset(
                 image_dir=tmp_path / "imgs",
                 mask_dir=tmp_path / "msks",
             )
+
+    def test_missing_image_dir_raises(self, tmp_path):
+        (tmp_path / "msks").mkdir()
+        with pytest.raises(FileNotFoundError, match="Image directory not found"):
+            ImageSegMultidirDataset(image_dir=tmp_path / "imgs", mask_dir=tmp_path / "msks")
+
+    def test_missing_mask_dir_raises(self, tmp_path, tmp_image_factory):
+        tmp_image_factory("imgs/a.png")
+        with pytest.raises(FileNotFoundError, match="Mask directory not found"):
+            ImageSegMultidirDataset(image_dir=tmp_path / "imgs", mask_dir=tmp_path / "msks")
 
 
 class TestMaskExtensions:
@@ -80,7 +90,7 @@ class TestMaskExtensions:
         ds = ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks", mask_extensions=[".BMP", ".png"])
         assert ds.samples[0][1].name == "a.bmp"
 
-        with pytest.raises(AssertionError, match="No valid samples"):
+        with pytest.raises(FileNotFoundError, match="No image/mask pairs found"):
             ImageSegMultidirDataset(tmp_path / "imgs", tmp_path / "msks", mask_extensions=[".tiff"])
 
     def test_uppercase_mask_extension(self, tmp_path, tmp_image_factory, tmp_mask_factory):

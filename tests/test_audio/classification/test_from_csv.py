@@ -113,12 +113,12 @@ class TestErrors:
             "data.csv",
             [{"path": str(tmp_path / "missing.wav"), "label": "speech"}],
         )
-        with pytest.raises(AssertionError, match="No valid audio entries"):
+        with pytest.raises(FileNotFoundError, match="No valid entries"):
             AudioCSVXLSXDataset(file_path=csv_path)
 
     def test_missing_columns_raises(self, tmp_path, tmp_csv_factory):
         csv_path = tmp_csv_factory("data.csv", [{"x": 1, "y": 2}])
-        with pytest.raises(AssertionError, match="path.*label"):
+        with pytest.raises(ValueError, match="path.*label"):
             AudioCSVXLSXDataset(file_path=csv_path)
 
 

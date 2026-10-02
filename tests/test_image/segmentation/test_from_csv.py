@@ -12,7 +12,7 @@ class TestBasicLoading:
         mask = tmp_mask_factory("masks/mask_0.png", size=(8, 8))
         csv_path = tmp_csv_factory(
             "data.csv",
-            [{"path": str(img.relative_to(tmp_path)), "label": str(mask.relative_to(tmp_path))}],
+            [{"image": str(img.relative_to(tmp_path)), "mask": str(mask.relative_to(tmp_path))}],
         )
         ds = ImageSegCSVXLSXDataset(file_path=csv_path)
         assert len(ds) == 1
@@ -22,7 +22,7 @@ class TestBasicLoading:
         mask = tmp_mask_factory("masks/mask_0.png", size=(8, 8))
         csv_path = tmp_csv_factory(
             "data.csv",
-            [{"path": str(img.relative_to(tmp_path)), "label": str(mask.relative_to(tmp_path))}],
+            [{"image": str(img.relative_to(tmp_path)), "mask": str(mask.relative_to(tmp_path))}],
         )
         ds = ImageSegCSVXLSXDataset(file_path=csv_path)
         image_out, mask_out = ds[0]
@@ -41,6 +41,13 @@ class TestCustomColumns:
         ds = ImageSegCSVXLSXDataset(file_path=csv_path, image_col="img", mask_col="msk")
         assert len(ds) == 1
 
+    def test_default_columns_are_image_and_mask(self):
+        import inspect
+
+        params = inspect.signature(ImageSegCSVXLSXDataset.__init__).parameters
+        assert params["image_col"].default == "image"
+        assert params["mask_col"].default == "mask"
+
 
 class TestReturnPath:
     def test_return_path_flag(self, tmp_path, tmp_image_factory, tmp_mask_factory, tmp_csv_factory):
@@ -48,7 +55,7 @@ class TestReturnPath:
         mask = tmp_mask_factory("masks/mask.png", size=(8, 8))
         csv_path = tmp_csv_factory(
             "data.csv",
-            [{"path": str(img.relative_to(tmp_path)), "label": str(mask.relative_to(tmp_path))}],
+            [{"image": str(img.relative_to(tmp_path)), "mask": str(mask.relative_to(tmp_path))}],
         )
         ds = ImageSegCSVXLSXDataset(file_path=csv_path, return_path=True)
         result = ds[0]
@@ -59,14 +66,20 @@ class TestErrors:
     def test_no_valid_entries_raises(self, tmp_path, tmp_csv_factory):
         csv_path = tmp_csv_factory(
             "data.csv",
-            [{"path": "nonexistent.png", "label": "nonexistent_mask.png"}],
+            [{"image": "nonexistent.png", "mask": "nonexistent_mask.png"}],
         )
-        with pytest.raises(AssertionError, match="No valid entries"):
+        with pytest.raises(FileNotFoundError, match="No valid entries"):
             ImageSegCSVXLSXDataset(file_path=csv_path)
 
     def test_missing_columns_raises(self, tmp_path, tmp_csv_factory):
         csv_path = tmp_csv_factory("data.csv", [{"x": 1, "y": 2}])
-        with pytest.raises(AssertionError, match="path.*label"):
+        with pytest.raises(ValueError, match="image.*mask"):
+            ImageSegCSVXLSXDataset(file_path=csv_path)
+
+    def test_old_default_column_names_raise_clear_error(self, tmp_path, tmp_csv_factory):
+        """A file written for the old defaults (path/label) names the columns it needs."""
+        csv_path = tmp_csv_factory("data.csv", [{"path": "a.png", "label": "a_mask.png"}])
+        with pytest.raises(ValueError, match=r"\['image', 'mask'\]"):
             ImageSegCSVXLSXDataset(file_path=csv_path)
 
 
@@ -81,8 +94,8 @@ class TestMaskValidation:
         csv_path = tmp_csv_factory(
             "data.csv",
             [
-                {"path": "images/ok.png", "label": "masks/ok.png"},
-                {"path": "images/orphan.png", "label": "masks/missing.png"},
+                {"image": "images/ok.png", "mask": "masks/ok.png"},
+                {"image": "images/orphan.png", "mask": "masks/missing.png"},
             ],
         )
         ds = ImageSegCSVXLSXDataset(file_path=csv_path)
@@ -99,8 +112,8 @@ class TestMaskValidation:
         csv_path = tmp_csv_factory(
             "data.csv",
             [
-                {"path": "images/a.png", "label": "masks/a.png"},
-                {"path": "images/b.png", "label": "masks/b.txt"},
+                {"image": "images/a.png", "mask": "masks/a.png"},
+                {"image": "images/b.png", "mask": "masks/b.txt"},
             ],
         )
         ds = ImageSegCSVXLSXDataset(file_path=csv_path)
@@ -109,9 +122,9 @@ class TestMaskValidation:
     def test_all_masks_missing_raises(self, tmp_path, tmp_image_factory, tmp_csv_factory):
         tmp_image_factory("images/a.png")
         csv_path = tmp_csv_factory(
-            "data.csv", [{"path": "images/a.png", "label": "masks/missing.png"}]
+            "data.csv", [{"image": "images/a.png", "mask": "masks/missing.png"}]
         )
-        with pytest.raises(AssertionError, match="No valid entries"):
+        with pytest.raises(FileNotFoundError, match="No valid entries"):
             ImageSegCSVXLSXDataset(file_path=csv_path)
 
 
@@ -121,6 +134,6 @@ class TestExcelFile:
         tmp_image_factory("images/a.png")
         tmp_mask_factory("masks/a.png")
         xlsx_path = tmp_path / "data.xlsx"
-        pd.DataFrame({"path": ["images/a.png"], "label": ["masks/a.png"]}).to_excel(xlsx_path, index=False)
+        pd.DataFrame({"image": ["images/a.png"], "mask": ["masks/a.png"]}).to_excel(xlsx_path, index=False)
         ds = ImageSegCSVXLSXDataset(file_path=xlsx_path)
         assert len(ds) == 1

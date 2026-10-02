@@ -223,6 +223,10 @@ class TestTabularDatasetFromCSVXLSX:
         )
         assert len(dataset) == 3  # 5 rows − 2 exact duplicates
 
+    def test_duplicates_kept_by_default(self, dup_csv):
+        dataset = TabularDatasetFromCSVXLSX(file_path=dup_csv, target_cols='target')
+        assert len(dataset) == 5
+
     # ------------------------------------------------------------------ #
     # Transforms
     # ------------------------------------------------------------------ #
