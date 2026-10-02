@@ -44,18 +44,29 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
         self.create_metadata()
 
     def _load_samples(self) -> None:
-        """Load samples from the sub-directory structure."""
+        """Load samples from the sub-directory structure.
+
+        Raises:
+            FileNotFoundError: If root_dir does not exist, has no class folders, or no audio files.
+        """
+        if not self.root.is_dir():
+            raise FileNotFoundError(f"Directory not found: '{self.root}'")
 
         # Get all sub-directories as classes and create class_to_idx mapping
         classes: List[str] = sorted([p.name for p in self.root.iterdir() if p.is_dir()])
+        if not classes:
+            raise FileNotFoundError(f"No class folders found in '{self.root}' (expected one sub-folder per class).")
         self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
         samples: List[tuple[Path, int]] = []
 
-        # Iterate over the classes and their audio files
+        # Iterate over the classes and their audio files (sorted, so the order is the same on every OS)
         for cls in classes:
-            for audio_path in (self.root / cls).glob("*"):
+            for audio_path in sorted((self.root / cls).glob("*")):
                 if audio_path.is_file() and audio_path.suffix.lower() in self.extensions:
                     samples.append((audio_path, self.class_to_idx[cls]))
 
+        if not samples:
+            raise FileNotFoundError(
+                f"No files with extensions {sorted(self.extensions)} found in the class folders of '{self.root}'."
+            )
         self.samples = samples
-        assert len(self.samples) > 0, "No valid samples found in the dataset."

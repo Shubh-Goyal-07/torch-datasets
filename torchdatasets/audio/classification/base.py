@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import Dataset
 from collections import defaultdict
-from typing import List, Optional, Callable, Tuple, Any, Dict, Union
+from pathlib import Path
+from typing import List, Optional, Callable, Tuple, Dict, Union
 
 from torchdatasets._internal.io.audio import DEFAULT_AUDIO_EXTENSIONS, load_audio
 
@@ -27,11 +28,24 @@ class BaseAudioClassificationDataset(Dataset):
         self.transform = transform
         self.return_path = return_path
         self.sample_rate = sample_rate
-        self.samples: List[Tuple[str, Union[int, List[int]]]] = []
+        self.samples: List[Tuple[Path, Union[int, List[int]]]] = []
         self.class_to_idx: Dict[str, int] = {}
         self.idx_to_class: Dict[int, str] = {}
-        self.class_count: Dict[str, int] = {}
+        self.class_count: Dict[int, int] = {}
         self.extensions: set[str] = set(ext.lower() for ext in (extensions or DEFAULT_AUDIO_EXTENSIONS))
+
+    @property
+    def targets(self) -> List[Union[int, List[int]]]:
+        """Label of every sample, in index order, without loading any audio.
+
+        ``targets[i]`` is the label ``dataset[i]`` returns: a class index, or a list of class
+        indices for multi-label datasets. The list is rebuilt from ``samples`` on each access,
+        so keep a reference if you need it more than once.
+
+        Returns:
+            List[Union[int, List[int]]]: One label per sample.
+        """
+        return [label for _, label in self.samples]
 
     def __len__(self) -> int:
         """Return the number of samples in the dataset.
@@ -84,7 +98,8 @@ class BaseAudioClassificationDataset(Dataset):
     def create_metadata(self) -> None:
         """Create metadata for the dataset, it includes:
         1. idx_to_class: Dictionary mapping class indices to class names.
-        2. class_count: Dictionary mapping class names to the number of samples in each class.
+        2. class_count: Dictionary mapping class indices to the number of samples in each class
+           (use idx_to_class to get the names).
         """
         self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
         count = defaultdict(int)
