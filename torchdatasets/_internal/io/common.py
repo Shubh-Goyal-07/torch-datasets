@@ -1,5 +1,25 @@
 import pandas as pd
 from pathlib import Path
+from typing import Sequence
+
+
+def require_columns(df: pd.DataFrame, columns: Sequence[str], file_path: Path) -> None:
+    """Check that a loaded CSV/Excel file has the columns a dataset reads.
+
+    Args:
+        df (pd.DataFrame): The file's contents.
+        columns (Sequence[str]): Column names that must be present.
+        file_path (Path): The file, for the error message.
+
+    Raises:
+        ValueError: If any of ``columns`` is missing.
+    """
+    missing = [col for col in columns if col not in df.columns]
+    if missing:
+        raise ValueError(
+            f"'{file_path}' must have the column(s) {list(columns)}; missing: {missing} "
+            f"(columns found: {list(df.columns)})."
+        )
 
 
 def load_csv_or_excel(file_path: Path) -> pd.DataFrame:
