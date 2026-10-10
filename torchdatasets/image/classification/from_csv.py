@@ -3,6 +3,7 @@ from typing import List, Optional, Callable, Union
 
 from torchdatasets.image.classification.base import BaseImageClassificationDataset
 from torchdatasets._internal.io.common import (
+    folder_of,
     labelled_rows,
     load_csv_or_excel,
     no_usable_rows,
@@ -34,8 +35,8 @@ class ImageCSVDataset(BaseImageClassificationDataset):
         """Initialize the dataset from a CSV or Excel file.
 
         Args:
-            file_path (Union[str, Path]): Path to the CSV or Excel file. Image paths in it are used as
-                written, so relative ones start from the current working directory.
+            file_path (Union[str, Path]): Path to the CSV or Excel file. Image paths in it can be
+                absolute or relative to the file's own folder (not the working directory).
             transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
             return_path (bool, optional): Whether to return the path to the image. Defaults to False.
             extensions (Optional[List[str]], optional): Optional list of image extensions. Defaults to None.
@@ -67,10 +68,13 @@ class ImageCSVDataset(BaseImageClassificationDataset):
         require_columns(df, [self.path_col, self.label_col], self.file_path)
 
         # Keep rows with a label and an existing image file; the rest are skipped with a warning
-        samples, skipped = labelled_rows(df, self.path_col, self.label_col, self.label_sep, self.extensions)
+        base_dir = folder_of(self.file_path)
+        samples, skipped = labelled_rows(
+            df, self.path_col, self.label_col, self.label_sep, self.extensions, base_dir
+        )
         requirement = (
             f"each row needs a label and an existing image file with an extension in {sorted(self.extensions)}; "
-            "paths are used as written, so relative ones start from the current working directory"
+            f"relative paths start from the file's folder '{base_dir}'"
         )
 
         # Check if any valid samples were found

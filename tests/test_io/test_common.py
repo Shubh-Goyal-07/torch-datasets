@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from torchdatasets._internal.io.common import cell_text, is_blank, load_csv_or_excel
+from torchdatasets._internal.io.common import cell_text, folder_of, is_blank, load_csv_or_excel, resolve_path
 
 
 class TestLoadCSV:
@@ -82,3 +82,24 @@ class TestCellHelpers:
     )
     def test_cell_text(self, cell, text):
         assert cell_text(cell) == text
+
+
+class TestResolvePath:
+    """CSV path cells: absolute as written, relative from the CSV file's folder."""
+
+    def test_relative_path_starts_from_the_base_folder(self, tmp_path):
+        assert resolve_path("imgs/a.png", tmp_path) == tmp_path / "imgs" / "a.png"
+
+    def test_parent_segments_are_normalised(self, tmp_path):
+        resolved = resolve_path("../imgs/a.png", tmp_path / "csvs")
+        assert resolved == tmp_path / "imgs" / "a.png"
+        assert ".." not in str(resolved)
+
+    def test_absolute_path_is_kept(self, tmp_path):
+        absolute = tmp_path / "x" / "a.png"
+        assert str(resolve_path(str(absolute), tmp_path / "other")) == str(absolute)
+
+    def test_folder_of_a_relative_file_is_absolute(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        assert folder_of(Path("data") / "labels.csv") == tmp_path / "data"
+        assert folder_of(Path("labels.csv")) == tmp_path

@@ -75,6 +75,9 @@ or changing what it returns, has to wait for 2.0. Adding things is fine.
   (sorted by name, the same way on every OS, and without hidden files), and read
   images with `load_image` / `load_mask` from `torchdatasets._internal.io.image`, which also open
   paths with non-ASCII characters on Windows.
+- **CSV paths:** a path in a CSV/Excel file is absolute or relative to that file's folder, never to
+  the working directory; resolve it with `folder_of` and `resolve_path` from
+  `torchdatasets._internal.io.common`.
 - **Skipped rows:** when a CSV/Excel row can't be used, skip it and report all skipped rows with one
   warning (`warn_skipped_rows` in `torchdatasets._internal.io.common`), never silently.
 - **Warnings:** point a warning at the user's line with `stacklevel`. In tests, a warning that

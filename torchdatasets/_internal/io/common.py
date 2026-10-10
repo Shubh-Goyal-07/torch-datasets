@@ -1,3 +1,4 @@
+import os
 import warnings
 from pathlib import Path
 from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
@@ -83,42 +84,92 @@ def cell_text(cell: Any) -> str:
     return str(cell).strip()
 
 
+def folder_of(file_path: Path) -> Path:
+    """The absolute folder holding a CSV/Excel file: relative paths in the file start there.
+
+    Args:
+        file_path (Path): The CSV/Excel file (absolute, or relative to the working directory).
+
+    Returns:
+        Path: The folder, as an absolute path.
+    """
+    return Path(os.path.normpath(Path(file_path).absolute().parent))
+
+
+def resolve_path(cell: str, base_dir: Path) -> Path:
+    """The file a path cell of a CSV/Excel file points to, as an absolute path.
+
+    Absolute paths are used as written; relative ones start from ``base_dir`` (the CSV/Excel
+    file's folder), so the working directory doesn't matter. The result is normalised
+    (``imgs/../a.png`` becomes ``a.png``, separators follow the OS) without following
+    symlinks, so ``return_path`` gives back an absolute path as written in the file.
+
+    Args:
+        cell (str): The cell's text.
+        base_dir (Path): Folder that relative paths start from.
+
+    Returns:
+        Path: The absolute path.
+    """
+    path = Path(cell)
+    if not path.is_absolute():
+        path = Path(base_dir).absolute() / path
+    return Path(os.path.normpath(path))
+
+
+def row_name(position: int) -> str:
+    """How a warning names a data row: its row number in a spreadsheet (the header is row 1).
+
+    Args:
+        position (int): 0-based position of the row among the data rows.
+
+    Returns:
+        str: E.g. ``"row 2"`` for the first data row.
+    """
+    return f"row {position + 2}"
+
+
 def labelled_rows(
     df: pd.DataFrame,
     path_col: str,
     label_col: str,
     label_sep: Optional[str],
     extensions: Iterable[str],
+    base_dir: Path,
 ) -> Tuple[List[Tuple[Path, Union[str, List[str]]]], List[str]]:
     """Rows that name an existing file with an allowed extension and have a label.
 
     Args:
         df (pd.DataFrame): The CSV/Excel contents.
-        path_col (str): Column with the file paths (used as written).
+        path_col (str): Column with the file paths (absolute, or relative to ``base_dir``).
         label_col (str): Column with the labels.
         label_sep (Optional[str]): Separator for several labels per row, or None for one label.
         extensions (Iterable[str]): Allowed file extensions (compared case-insensitively).
+        base_dir (Path): Folder that relative paths start from (the CSV/Excel file's folder).
 
     Returns:
-        Tuple[List[Tuple[Path, Union[str, List[str]]]], List[str]]: ``(path, label)`` pairs (a list of
-        labels when label_sep is set), and the path cells of the rows that were left out.
+        Tuple[List[Tuple[Path, Union[str, List[str]]]], List[str]]: ``(absolute path, label)`` pairs
+        (a list of labels when label_sep is set), and a description of each row that was left out
+        (``"row 5: /data/imgs/x.png"``).
     """
     allowed = {ext.lower() for ext in extensions}
     rows: List[Tuple[Path, Union[str, List[str]]]] = []
     skipped: List[str] = []
-    for path_cell, label_cell in zip(df[path_col], df[label_col]):
+    for position, (path_cell, label_cell) in enumerate(zip(df[path_col], df[label_col])):
         if is_blank(path_cell) or is_blank(label_cell):
-            skipped.append(str(path_cell))
+            skipped.append(f"{row_name(position)}: empty cell")
             continue
-        path = Path(cell_text(path_cell))
+        path = resolve_path(cell_text(path_cell), base_dir)
         if label_sep is None:
             label: Union[str, List[str]] = cell_text(label_cell)
         else:
             label = [part.strip() for part in cell_text(label_cell).split(label_sep) if part.strip()]
-        if label and path.suffix.lower() in allowed and path.is_file():
+        if not label:
+            skipped.append(f"{row_name(position)}: no label")
+        elif path.suffix.lower() in allowed and path.is_file():
             rows.append((path, label))
         else:
-            skipped.append(str(path))
+            skipped.append(f"{row_name(position)}: {path}")
     return rows, skipped
 
 
@@ -127,14 +178,14 @@ def no_usable_rows(file_path: Path, skipped: List[str], total: int, requirement:
 
     Args:
         file_path (Path): The file.
-        skipped (List[str]): The path cells of the skipped rows.
+        skipped (List[str]): A description of each skipped row.
         total (int): Number of rows in the file.
         requirement (str): What a row needs in order to be used.
 
     Returns:
         FileNotFoundError: The error, ready to raise.
     """
-    examples = f"; first ones: {skipped[:3]}" if skipped else ""
+    examples = f"; first ones: {'; '.join(skipped[:3])}" if skipped else ""
     return FileNotFoundError(
         f"No valid entries in '{file_path}': none of its {total} row(s) can be used "
         f"({requirement}){examples}."
@@ -146,13 +197,13 @@ def warn_skipped_rows(file_path: Path, skipped: List[str], total: int, requireme
 
     Args:
         file_path (Path): The file.
-        skipped (List[str]): The path cells of the skipped rows.
+        skipped (List[str]): A description of each skipped row.
         total (int): Number of rows in the file.
         requirement (str): What a row needs in order to be used.
     """
     if skipped:
         warnings.warn(
             f"Skipped {len(skipped)} of {total} row(s) in '{file_path}' ({requirement}); "
-            f"first ones: {skipped[:3]}",
+            f"first ones: {'; '.join(skipped[:3])}",
             stacklevel=4,  # dataset constructor -> _load_samples -> here: point at the caller
         )

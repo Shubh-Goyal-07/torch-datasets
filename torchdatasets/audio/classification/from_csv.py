@@ -3,6 +3,7 @@ from typing import List, Optional, Callable, Union
 
 from torchdatasets.audio.classification.base import BaseAudioClassificationDataset
 from torchdatasets._internal.io.common import (
+    folder_of,
     labelled_rows,
     load_csv_or_excel,
     no_usable_rows,
@@ -35,8 +36,8 @@ class AudioCSVDataset(BaseAudioClassificationDataset):
         """Initialize the dataset from a CSV or Excel file.
 
         Args:
-            file_path (Union[str, Path]): Path to the CSV or Excel file. Audio paths in it are used as
-                written, so relative ones start from the current working directory.
+            file_path (Union[str, Path]): Path to the CSV or Excel file. Audio paths in it can be
+                absolute or relative to the file's own folder (not the working directory).
             transform (Optional[Callable], optional): Optional transform to be applied to the waveforms. Defaults to None.
             return_path (bool, optional): Whether to return the path to the audio file. Defaults to False.
             sample_rate (Optional[int], optional): Resample every clip to this rate. Defaults to None (keep the file's rate).
@@ -69,10 +70,13 @@ class AudioCSVDataset(BaseAudioClassificationDataset):
         require_columns(df, [self.path_col, self.label_col], self.file_path)
 
         # Keep rows with a label and an existing audio file; the rest are skipped with a warning
-        samples, skipped = labelled_rows(df, self.path_col, self.label_col, self.label_sep, self.extensions)
+        base_dir = folder_of(self.file_path)
+        samples, skipped = labelled_rows(
+            df, self.path_col, self.label_col, self.label_sep, self.extensions, base_dir
+        )
         requirement = (
             f"each row needs a label and an existing audio file with an extension in {sorted(self.extensions)}; "
-            "paths are used as written, so relative ones start from the current working directory"
+            f"relative paths start from the file's folder '{base_dir}'"
         )
 
         # Check if any valid samples were found

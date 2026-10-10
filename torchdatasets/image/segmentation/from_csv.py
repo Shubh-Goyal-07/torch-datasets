@@ -4,10 +4,13 @@ from typing import List, Optional, Callable, Tuple, Union
 from torchdatasets.image.segmentation.base import BaseImageSegmentationDataset
 from torchdatasets._internal.io.common import (
     cell_text,
+    folder_of,
     is_blank,
     load_csv_or_excel,
     no_usable_rows,
     require_columns,
+    resolve_path,
+    row_name,
     warn_skipped_rows,
 )
 
@@ -35,8 +38,8 @@ class ImageSegCSVDataset(BaseImageSegmentationDataset):
         """Initialize the dataset.
 
         Args:
-            file_path (Union[str, Path]): Path to the CSV or Excel file. Relative image and mask paths
-                in it are resolved from the file's own folder.
+            file_path (Union[str, Path]): Path to the CSV or Excel file. Image and mask paths in it can
+                be absolute or relative to the file's own folder (not the working directory).
             transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
             image_col (str, optional): Column name for image paths. Defaults to "image".
             mask_col (str, optional): Column name for mask paths. Defaults to "mask".
@@ -65,16 +68,16 @@ class ImageSegCSVDataset(BaseImageSegmentationDataset):
         # Check if the required columns are present in the DataFrame
         require_columns(df, [self.image_col, self.mask_col], self.file_path)
 
-        base_dir = self.file_path.parent
+        base_dir = folder_of(self.file_path)
         samples: List[Tuple[Path, Path]] = []
         skipped: List[str] = []
 
-        for image_cell, mask_cell in zip(df[self.image_col], df[self.mask_col]):
+        for position, (image_cell, mask_cell) in enumerate(zip(df[self.image_col], df[self.mask_col])):
             if is_blank(image_cell) or is_blank(mask_cell):
-                skipped.append(str(image_cell))
+                skipped.append(f"{row_name(position)}: empty cell")
                 continue
-            img_path = (base_dir / cell_text(image_cell)).resolve()
-            mask_path = (base_dir / cell_text(mask_cell)).resolve()
+            img_path = resolve_path(cell_text(image_cell), base_dir)
+            mask_path = resolve_path(cell_text(mask_cell), base_dir)
 
             # Keep the row only if the image and mask exist and have a valid extension
             img_ok = img_path.suffix.lower() in self.extensions and img_path.is_file()
@@ -82,7 +85,7 @@ class ImageSegCSVDataset(BaseImageSegmentationDataset):
             if img_ok and mask_ok:
                 samples.append((img_path, mask_path))
             else:
-                skipped.append(cell_text(image_cell))
+                skipped.append(f"{row_name(position)}: {mask_path if img_ok else img_path}")
 
         requirement = (
             f"each row needs an existing image and mask with an extension in {sorted(self.extensions)}; "

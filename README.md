@@ -140,12 +140,14 @@ dataloader = DataLoader(dataset, batch_size=32, sampler=sampler)
   `.`, such as `.DS_Store`, macOS `._photo.jpg` files or `.ipynb_checkpoints`) are skipped, and
   names are sorted case-sensitively (`Cat` before `bird`, as in torchvision's `ImageFolder`), so
   samples and class indices are the same on every OS.
-- **CSV/Excel files of paths** (image, audio and segmentation datasets): a row with an empty
-  cell, or whose file is missing or has another extension, is skipped, and you get one warning
-  saying how many rows were skipped. Image and audio paths are used as written (relative paths
-  start from the current working directory); segmentation paths are relative to the CSV/Excel
-  file's own folder. Cells are read as text, exactly as written apart from surrounding spaces:
-  `007` and `7` are different labels, and a label such as `NA` or `None` is kept.
+- **CSV/Excel files of paths** (image, audio and segmentation datasets): paths can be absolute,
+  or relative to the CSV/Excel file's own folder, whatever the working directory is. Datasets
+  keep absolute paths, so `return_path=True` gives absolute paths too. A row with an empty cell,
+  or whose file is missing or has another extension, is skipped, and you get one warning saying
+  how many rows were skipped, with their row numbers (as a spreadsheet numbers them, the header
+  being row 1) and the paths that were looked for. Cells are read as text, exactly as written
+  apart from surrounding spaces: `007` and `7` are different labels, and a label such as `NA` or
+  `None` is kept.
 - **Paths** can contain any characters, including non-ASCII ones on Windows.
 - **Errors:** if a dataset can't find anything to load (a missing folder, no files with the
   allowed extensions, no usable CSV row) it raises `FileNotFoundError`; a CSV/Excel file without

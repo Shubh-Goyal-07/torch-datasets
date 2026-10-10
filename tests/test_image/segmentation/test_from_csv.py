@@ -98,7 +98,7 @@ class TestMaskValidation:
                 {"image": "images/orphan.png", "mask": "masks/missing.png"},
             ],
         )
-        with pytest.warns(UserWarning, match=r"Skipped 1 of 2 row\(s\).*images/orphan\.png"):
+        with pytest.warns(UserWarning, match=r"Skipped 1 of 2 row\(s\).*row 3: .*masks[\\/]missing\.png"):
             ds = ImageSegCSVDataset(file_path=csv_path)
         assert len(ds) == 1
         assert ds.samples[0][1] == mask_ok.resolve()
@@ -165,3 +165,23 @@ class TestSkippedRows:
         csv_path = tmp_csv_factory("data.csv", [{"image": " images/a.png", "mask": "masks/a.png "}])
         ds = ImageSegCSVDataset(csv_path)
         assert len(ds) == 1
+
+
+class TestPaths:
+    def test_absolute_paths_are_used_as_written(self, tmp_image_factory, tmp_mask_factory, tmp_csv_factory):
+        img = tmp_image_factory("images/a.png")
+        mask = tmp_mask_factory("masks/a.png")
+        csv_path = tmp_csv_factory("csvs/data.csv", [{"image": str(img), "mask": str(mask)}])
+        ds = ImageSegCSVDataset(csv_path, return_path=True)
+        assert ds.samples == [(img, mask)]
+        assert ds[0][2] == str(img)
+
+    def test_relative_paths_start_from_the_csv_folder_whatever_the_working_directory(
+        self, tmp_path, tmp_image_factory, tmp_mask_factory, tmp_csv_factory, monkeypatch
+    ):
+        img = tmp_image_factory("data/images/a.png")
+        mask = tmp_mask_factory("data/masks/a.png")
+        csv_path = tmp_csv_factory("data/split.csv", [{"image": "images/a.png", "mask": "masks/a.png"}])
+        (tmp_path / "elsewhere").mkdir()
+        monkeypatch.chdir(tmp_path / "elsewhere")
+        assert ImageSegCSVDataset(csv_path).samples == [(img, mask)]

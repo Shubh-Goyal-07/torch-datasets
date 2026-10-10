@@ -151,3 +151,14 @@ class TestSkippedRows:
         assert record[0].filename == __file__  # the warning points at the caller
         assert len(ds) == 1
         assert ds.class_to_idx == {"speech": 0}
+
+
+class TestPaths:
+    def test_relative_paths_start_from_the_csv_folder(self, tmp_path, monkeypatch):
+        clip = _create_wav(tmp_path / "data" / "clips" / "a.wav")
+        (tmp_path / "data" / "clips.csv").write_text("path,label\nclips/a.wav,speech\n")
+        (tmp_path / "elsewhere").mkdir()
+        monkeypatch.chdir(tmp_path / "elsewhere")
+        ds = AudioCSVDataset(tmp_path / "data" / "clips.csv", return_path=True)
+        assert ds.samples[0][0] == clip
+        assert ds[0][2] == str(clip)

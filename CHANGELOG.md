@@ -40,10 +40,11 @@ The first stable release, rewritten since 0.0.3.
   case-insensitively; images default to `.jpg .jpeg .png .bmp .tiff .tif .webp`), skip hidden files
   and folders (`.DS_Store`, macOS `._photo.jpg` files, `.ipynb_checkpoints`), and sort names
   case-sensitively, so samples and class indices are the same on every OS.
-- The image, audio and segmentation CSV/Excel datasets skip rows with an empty cell, a missing file
-  or another extension, with one warning that says how many rows were skipped. Their cells are read
-  as text, exactly as written (`007` and `7` are different labels; `NA` is a label, not a missing
-  value).
+- In the image, audio and segmentation CSV/Excel datasets, paths can be absolute or relative to the
+  CSV/Excel file's own folder (the working directory doesn't matter). Rows with an empty cell, a
+  missing file or another extension are skipped, with one warning that says how many rows were
+  skipped and lists the first ones by row number. Cells are read as text, exactly as written
+  (`007` and `7` are different labels; `NA` is a label, not a missing value).
 - Images are decoded from the file's bytes, so paths with non-ASCII characters work on Windows.
 - Missing data raises `FileNotFoundError`; invalid values and missing CSV/Excel columns raise
   `ValueError`; arguments of the wrong type raise `TypeError`.
@@ -85,8 +86,9 @@ changed too:
 | argument `sep` | `label_sep` |
 | argument `binary_mask` | `is_binary` |
 
-Every option is keyword-only, and `ImageSegCSVDataset` reads the `image` and `mask` columns by
-default.
+Every option is keyword-only, `ImageSegCSVDataset` reads the `image` and `mask` columns by default,
+and relative paths in `ImageCSVDataset` and `AudioCSVDataset` files start from the CSV/Excel file's
+folder (they used to start from the working directory).
 
 ### Migrating from 0.0.3
 
