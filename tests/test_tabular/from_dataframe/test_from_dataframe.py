@@ -692,3 +692,59 @@ class TestFitFrom:
     def test_fit_from_must_be_a_dataset(self):
         with pytest.raises(TypeError):
             TabularDatasetFromDataFrame(self._train_df(), target_cols='y', fit_from="train")
+
+
+# ---------------------------------------------------------------------------
+# label_map: fixed class indices
+# ---------------------------------------------------------------------------
+
+class TestLabelMap:
+
+    @staticmethod
+    def _df():
+        return pd.DataFrame({'x': [0.1, 0.2, 0.3, 0.4], 'level': ['low', 'high', 'medium', 'low']})
+
+    def test_label_map_sets_the_indices(self):
+        dataset = TabularDatasetFromDataFrame(self._df(), target_cols='level',
+                                              label_map={'low': 0, 'medium': 1, 'high': 2})
+        assert dataset.targets == [0, 2, 1, 0]
+        assert dataset.idx_to_class == {0: 'low', 1: 'medium', 2: 'high'}
+        assert dataset.n_classes == 3
+
+    def test_label_map_may_list_extra_classes(self):
+        dataset = TabularDatasetFromDataFrame(self._df(), target_cols='level',
+                                              label_map={'low': 0, 'medium': 1, 'high': 2, 'extreme': 3})
+        assert dataset.n_classes == 4 and 3 not in dataset.targets
+
+    def test_label_missing_from_label_map_raises(self):
+        with pytest.raises(ValueError, match="missing from label_map.*'medium'"):
+            TabularDatasetFromDataFrame(self._df(), target_cols='level', label_map={'low': 0, 'high': 1})
+
+    def test_numeric_labels(self):
+        df = pd.DataFrame({'x': [0.1, 0.2, 0.3], 'y': [5, 7, 5]})
+        dataset = TabularDatasetFromDataFrame(df, target_cols='y', label_map={7: 0, 5: 1})
+        assert dataset.targets == [1, 0, 1]
+
+    def test_fit_from_keeps_the_label_map(self):
+        train = TabularDatasetFromDataFrame(self._df(), target_cols='level',
+                                            label_map={'low': 0, 'medium': 1, 'high': 2})
+        val = TabularDatasetFromDataFrame(self._df().iloc[:2], fit_from=train)
+        assert val.class_to_idx == train.class_to_idx and val.targets == [0, 2]
+
+    @pytest.mark.parametrize("kwargs, message", [
+        ({'task': 'regression', 'target_cols': 'x'}, "only applies to classification"),
+        ({'target_cols': ['level', 'x']}, "only applies to classification"),
+        ({'n_bins': 2, 'target_cols': 'x'}, "only applies to classification"),
+    ])
+    def test_label_map_needs_one_class_column(self, kwargs, message):
+        with pytest.raises(ValueError, match=message):
+            TabularDatasetFromDataFrame(self._df(), label_map={'low': 0}, **kwargs)
+
+    def test_label_map_and_fit_from_conflict(self):
+        train = TabularDatasetFromDataFrame(self._df(), target_cols='level')
+        with pytest.raises(ValueError, match="not both"):
+            TabularDatasetFromDataFrame(self._df(), fit_from=train, label_map={'low': 0, 'medium': 1, 'high': 2})
+
+    def test_duplicate_indices_raise(self):
+        with pytest.raises(ValueError, match="same index"):
+            TabularDatasetFromDataFrame(self._df(), target_cols='level', label_map={'low': 0, 'medium': 0, 'high': 1})

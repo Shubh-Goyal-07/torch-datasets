@@ -330,3 +330,12 @@ class TestExcelFiles:
         assert torch.equal(from_xlsx.y, from_csv.y)
         assert from_xlsx.class_to_idx == from_csv.class_to_idx
         assert from_xlsx.get_dataset_info()['file_path'] == str(xlsx_path)
+
+
+class TestLabelMapCSV:
+
+    def test_label_map_is_passed_through(self, tmp_path):
+        path = tmp_path / 'levels.csv'
+        pd.DataFrame({'x': [1.0, 2.0, 3.0], 'level': ['high', 'low', 'medium']}).to_csv(path, index=False)
+        dataset = TabularDatasetFromCSVXLSX(path, target_cols='level', label_map={'low': 0, 'medium': 1, 'high': 2})
+        assert dataset.targets == [2, 0, 1]

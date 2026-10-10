@@ -30,6 +30,17 @@ EXPECTED = {
         "TabularDatasetFromDataFrame": "torchdatasets.tabular.from_dataframe",
         "TabularDatasetFromCSVXLSX": "torchdatasets.tabular.from_csv",
     },
+    "torchdatasets.metric_learning": {
+        "BaseMetricLearningWrapper": "torchdatasets.metric_learning.base",
+        "ContrastiveWrapper": "torchdatasets.metric_learning.contrastive",
+        "TripletWrapper": "torchdatasets.metric_learning.triplet",
+        "FewShotWrapper": "torchdatasets.metric_learning.few_shot",
+    },
+    "torchdatasets.utils": {
+        "TransformSubset": "torchdatasets.utils",
+        "train_val_split": "torchdatasets.utils",
+        "train_val_test_split": "torchdatasets.utils",
+    },
 }
 
 
@@ -57,10 +68,11 @@ def test_task_packages_export_their_classes(package, names):
         assert hasattr(module, name)
 
 
-def test_top_level_gives_modalities_lazily():
-    assert torchdatasets.__all__ == ["audio", "image", "tabular"]
+def test_top_level_gives_subpackages_lazily():
+    assert torchdatasets.__all__ == ["audio", "image", "metric_learning", "tabular", "utils"]
     assert torchdatasets.image.ImageSubdirDataset.__name__ == "ImageSubdirDataset"
-    assert "tabular" in dir(torchdatasets)
+    assert torchdatasets.utils.train_val_split.__name__ == "train_val_split"
+    assert "tabular" in dir(torchdatasets) and "metric_learning" in dir(torchdatasets)
     with pytest.raises(AttributeError):
         torchdatasets.video
 
@@ -86,10 +98,11 @@ def test_version_fallback_when_not_installed():
         importlib.reload(torchdatasets)
 
 
-def test_tabular_import_does_not_load_image_or_audio_stack():
-    """``import torchdatasets`` / the tabular package must not import torchvision or torchaudio."""
+@pytest.mark.parametrize("package", ["torchdatasets.tabular", "torchdatasets.utils", "torchdatasets.metric_learning"])
+def test_import_does_not_load_image_or_audio_stack(package):
+    """Tabular data and the modality-agnostic helpers must not import torchvision or torchaudio."""
     code = (
-        "import sys, torchdatasets.tabular; "
+        f"import sys, {package}; "
         "print(any(m in sys.modules for m in ('torchvision', 'torchaudio', 'cv2', 'torchdatasets.image')))"
     )
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)

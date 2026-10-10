@@ -11,7 +11,46 @@ from typing import Dict, List
 
 import numpy as np
 import pytest
+import torch
 from PIL import Image
+from torch.utils.data import Dataset
+
+
+# ---------------------------------------------------------------------------
+# In-memory labelled dataset (splitting and metric-learning tests)
+# ---------------------------------------------------------------------------
+
+
+class ToyDataset(Dataset):
+    """Labelled dataset whose sample ``i`` is ``tensor([float(i)])``, so a test can tell
+    which sample it got back. Has ``targets`` and ``transform`` like the real datasets."""
+
+    def __init__(self, labels, return_path: bool = False):
+        self.targets = list(labels)
+        self.transform = None
+        self.return_path = return_path
+
+    def __len__(self):
+        return len(self.targets)
+
+    def __getitem__(self, idx):
+        sample = torch.tensor([float(idx)])
+        if self.transform is not None:
+            sample = self.transform(sample)
+        if self.return_path:
+            return sample, self.targets[idx], f"sample_{idx}"
+        return sample, self.targets[idx]
+
+
+@pytest.fixture
+def toy_dataset():
+    """Factory for in-memory labelled datasets.
+
+    Usage:
+        ds = toy_dataset([0, 0, 1, 1, 2])        # targets
+        ds = toy_dataset([0, 1], return_path=True)
+    """
+    return ToyDataset
 
 
 # ---------------------------------------------------------------------------

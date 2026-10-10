@@ -8,7 +8,8 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
     """Tabular dataset from a pandas DataFrame.
 
     For classification with a single target column, labels (strings or numbers) are
-    encoded to contiguous indices ``0..n_classes-1``; see ``class_to_idx``/``idx_to_class``.
+    encoded to contiguous indices ``0..n_classes-1`` in sorted label order; see
+    ``class_to_idx``/``idx_to_class``. Pass ``label_map`` to choose the indices yourself.
 
     To build validation/test datasets that are preprocessed exactly like the training
     data, pass the training dataset as ``fit_from``::
@@ -35,7 +36,9 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         # Reuse fitted preprocessing from another dataset (e.g. train -> val/test)
-        fit_from: Optional["TabularDatasetFromDataFrame"] = None
+        fit_from: Optional["TabularDatasetFromDataFrame"] = None,
+        # Fixed class indices for a single-column classification target
+        label_map: Optional[Dict[Any, int]] = None
     ) -> None:
         """Initialize DataFrame tabular dataset.
 
@@ -56,6 +59,10 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
             fit_from: An already-built dataset (e.g. the training set) whose fitted preprocessing, label
                 encoding, columns, task and preprocessing options are reused. transform, target_transform
                 and drop_duplicates still apply per dataset.
+            label_map: Class label -> class index, used instead of numbering the sorted labels found in the
+                data (e.g. {"low": 0, "medium": 1, "high": 2} for ordered classes). Must cover every label in
+                the data and may list more. Only for classification with one target column and no n_bins;
+                can't be combined with fit_from.
         """
         if not isinstance(dataframe, pd.DataFrame):
             raise TypeError("dataframe must be a pandas DataFrame")
@@ -81,6 +88,14 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
                 f"(features={fit_from.feature_cols}, targets={fit_from.target_cols})"
             )
 
+        if label_map is not None:
+            if fit_from is not None:
+                raise ValueError("Pass label_map or fit_from, not both (fit_from already sets the class indices).")
+            if task != 'classification' or len(self.target_cols) != 1 or n_bins:
+                raise ValueError("label_map only applies to classification with one target column and no n_bins.")
+            if len(set(label_map.values())) != len(label_map):
+                raise ValueError("label_map gives the same index to more than one class.")
+
         # Target encoding state (fitted on the first dataframe, or copied from fit_from)
         self.class_to_idx: Dict[Any, int] = {}
         self.idx_to_class: Dict[int, Any] = {}
@@ -105,6 +120,10 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
             self.idx_to_class = dict(fit_from.idx_to_class)
             self.bin_edges = fit_from.bin_edges
             self._target_fitted = fit_from._target_fitted
+        elif label_map is not None:
+            self.class_to_idx = {self._to_python(cls): int(idx) for cls, idx in label_map.items()}
+            self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
+            self._target_fitted = True
 
         self.make_dataset()
 
@@ -130,13 +149,13 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
         return value.item() if isinstance(value, np.generic) else value
 
     def _encode_class_labels(self, values: pd.Series) -> np.ndarray:
-        """Encode single-column class labels to contiguous indices 0..n_classes-1.
+        """Encode single-column class labels to contiguous indices 0..n_classes-1 (or label_map's indices).
 
         Args:
             values (pd.Series): Raw target values (strings or numbers).
 
         Raises:
-            ValueError: If a label was not seen when the encoding was fitted.
+            ValueError: If a label was not seen when the encoding was fitted (or is missing from label_map).
 
         Returns:
             np.ndarray: Encoded labels.
@@ -155,7 +174,7 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
         unseen = encoded.isna()
         if unseen.any():
             examples = sorted({str(v) for v in values[unseen]})[:5]
-            raise ValueError(f"Target labels not seen when the label encoding was fitted: {examples}")
+            raise ValueError(f"Target labels not seen when the label encoding was fitted (or missing from label_map): {examples}")
         return encoded.to_numpy(dtype=np.int64)
 
     def _bin_targets(self, values: pd.Series) -> np.ndarray:

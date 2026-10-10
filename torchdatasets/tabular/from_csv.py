@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Dict, Optional, Callable, Union
+from typing import Any, List, Dict, Optional, Callable, Union
 
 from .from_dataframe import TabularDatasetFromDataFrame
 from torchdatasets._internal.io.common import load_csv_or_excel
@@ -25,7 +25,8 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             # Transform options
             transform: Optional[Callable] = None,
             target_transform: Optional[Callable] = None,
-            fit_from: Optional[TabularDatasetFromDataFrame] = None
+            fit_from: Optional[TabularDatasetFromDataFrame] = None,
+            label_map: Optional[Dict[Any, int]] = None
         ) -> None:
         """Initialize the dataset from a CSV or Excel file.
         
@@ -45,6 +46,9 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             target_transform (Optional[Callable], optional): Optional transform to be applied to the targets. Defaults to None.
             fit_from (Optional[TabularDatasetFromDataFrame], optional): An already-built dataset (e.g. the training set) whose
                 fitted preprocessing, label encoding, columns, task and preprocessing options are reused. Defaults to None.
+            label_map (Optional[Dict[Any, int]], optional): Class label -> class index, instead of numbering the sorted
+                labels (e.g. {"low": 0, "medium": 1, "high": 2}). Must cover every label; only for classification with
+                one target column and no n_bins; not with fit_from. Defaults to None.
         """
 
         self.file_path = Path(file_path)
@@ -68,7 +72,8 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             n_bins=n_bins,
             transform=transform,
             target_transform=target_transform,
-            fit_from=fit_from
+            fit_from=fit_from,
+            label_map=label_map
         )
 
     def get_dataset_info(self) -> Dict[str, Union[str, int, float, list, Dict, None]]:
