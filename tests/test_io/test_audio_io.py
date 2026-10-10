@@ -80,6 +80,16 @@ class TestDecoding:
         assert torch.allclose(waveform, signal, atol=1e-3)
 
 
+class TestPaths:
+    """soundfile opens non-ASCII paths on every platform (on Windows through sf_wchar_open)."""
+
+    def test_non_ascii_path_loads(self, tmp_path):
+        path, sr, n_samples = _create_wav(tmp_path / "café" / "Aufnahme ü 录音.wav")
+        waveform, returned_sr = load_audio(path)
+        assert returned_sr == sr
+        assert waveform.shape == (1, n_samples)
+
+
 class TestDefaultAudioExtensions:
     """Tests for extension constants."""
 

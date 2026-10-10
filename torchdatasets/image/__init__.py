@@ -1,30 +1,30 @@
 """Image datasets: classification and segmentation.
 
-    from torchdatasets.image import ImageSubdirDataset, ImageSegMultidirDataset
+    from torchdatasets.image import ImageSubdirDataset, ImageSegMultiDirDataset
 """
 
 from .classification import (
     BaseImageClassificationDataset,
-    ImageCSVXLSXDataset,
+    ImageCSVDataset,
     ImageSingleDirDataset,
     ImageSubdirDataset,
 )
 from .segmentation import (
     BaseImageSegmentationDataset,
-    ImageSegCSVXLSXDataset,
-    ImageSegMultidirDataset,
+    ImageSegCSVDataset,
+    ImageSegMultiDirDataset,
     ImageSegSingleDirDataset,
 )
 
 __all__ = [
     # classification
     "BaseImageClassificationDataset",
-    "ImageCSVXLSXDataset",
+    "ImageCSVDataset",
     "ImageSingleDirDataset",
     "ImageSubdirDataset",
     # segmentation
     "BaseImageSegmentationDataset",
-    "ImageSegCSVXLSXDataset",
-    "ImageSegMultidirDataset",
+    "ImageSegCSVDataset",
+    "ImageSegMultiDirDataset",
     "ImageSegSingleDirDataset",
 ]

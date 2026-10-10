@@ -101,3 +101,14 @@ class TestOrdering:
             _create_wav(tmp_path / "cls" / name)
         ds = AudioSubdirDataset(root_dir=tmp_path)
         assert [p.name for p, _ in ds.samples] == ["a.wav", "b.wav", "c.wav"]
+
+
+class TestHiddenFiles:
+    def test_hidden_folders_and_files_are_ignored(self, audio_subdir_tree):
+        root, classes = audio_subdir_tree
+        (root / ".ipynb_checkpoints").mkdir()
+        (root / ".ipynb_checkpoints" / "sample_0.wav").write_bytes(b"not audio")
+        (root / "speech" / "._sample_0.wav").write_bytes(b"macOS metadata")
+        ds = AudioSubdirDataset(root)
+        assert sorted(ds.class_to_idx) == sorted(classes)
+        assert len(ds) == sum(classes.values())

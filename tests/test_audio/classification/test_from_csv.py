@@ -1,11 +1,11 @@
-"""Tests for AudioCSVXLSXDataset — loads audio from CSV metadata."""
+"""Tests for AudioCSVDataset — loads audio from CSV metadata."""
 
 import torch
 import pytest
 
 sf = pytest.importorskip("soundfile")
 
-from torchdatasets.audio.classification.from_csv import AudioCSVXLSXDataset
+from torchdatasets.audio.classification.from_csv import AudioCSVDataset
 
 
 def _create_wav(path, sample_rate=16000, duration_ms=50, channels=1):
@@ -28,7 +28,7 @@ class TestSingleLabel:
                 {"path": str(p2), "label": "music"},
             ],
         )
-        ds = AudioCSVXLSXDataset(file_path=csv_path)
+        ds = AudioCSVDataset(file_path=csv_path)
         assert len(ds) == 2
 
     def test_getitem(self, tmp_path, tmp_csv_factory):
@@ -37,7 +37,7 @@ class TestSingleLabel:
             "data.csv",
             [{"path": str(p1), "label": "speech"}],
         )
-        ds = AudioCSVXLSXDataset(file_path=csv_path)
+        ds = AudioCSVDataset(file_path=csv_path)
         waveform, label = ds[0]
         assert isinstance(waveform, torch.Tensor)
         assert isinstance(label, int)
@@ -52,7 +52,7 @@ class TestSingleLabel:
                 {"path": str(p2), "label": "music"},
             ],
         )
-        ds = AudioCSVXLSXDataset(file_path=csv_path)
+        ds = AudioCSVDataset(file_path=csv_path)
         assert "speech" in ds.class_to_idx
         assert "music" in ds.class_to_idx
 
@@ -64,7 +64,7 @@ class TestMultiLabel:
             "data.csv",
             [{"path": str(p1), "label": "speech,music"}],
         )
-        ds = AudioCSVXLSXDataset(file_path=csv_path, label_sep=",")
+        ds = AudioCSVDataset(file_path=csv_path, label_sep=",")
         _, label = ds[0]
         assert isinstance(label, list)
         assert len(label) == 2
@@ -77,7 +77,7 @@ class TestReturnPath:
             "data.csv",
             [{"path": str(p1), "label": "speech"}],
         )
-        ds = AudioCSVXLSXDataset(file_path=csv_path, return_path=True)
+        ds = AudioCSVDataset(file_path=csv_path, return_path=True)
         result = ds[0]
         assert len(result) == 3
 
@@ -89,7 +89,7 @@ class TestCustomColumns:
             "data.csv",
             [{"audio_path": str(p1), "class": "speech"}],
         )
-        ds = AudioCSVXLSXDataset(
+        ds = AudioCSVDataset(
             file_path=csv_path, path_col="audio_path", label_col="class"
         )
         assert len(ds) == 1
@@ -105,7 +105,8 @@ class TestErrors:
                 {"path": str(tmp_path / "missing.wav"), "label": "music"},
             ],
         )
-        ds = AudioCSVXLSXDataset(file_path=csv_path)
+        with pytest.warns(UserWarning, match=r"Skipped 1 of 2 row\(s\).*missing\.wav"):
+            ds = AudioCSVDataset(file_path=csv_path)
         assert len(ds) == 1
 
     def test_no_valid_entries_raises(self, tmp_path, tmp_csv_factory):
@@ -114,12 +115,12 @@ class TestErrors:
             [{"path": str(tmp_path / "missing.wav"), "label": "speech"}],
         )
         with pytest.raises(FileNotFoundError, match="No valid entries"):
-            AudioCSVXLSXDataset(file_path=csv_path)
+            AudioCSVDataset(file_path=csv_path)
 
     def test_missing_columns_raises(self, tmp_path, tmp_csv_factory):
         csv_path = tmp_csv_factory("data.csv", [{"x": 1, "y": 2}])
         with pytest.raises(ValueError, match="path.*label"):
-            AudioCSVXLSXDataset(file_path=csv_path)
+            AudioCSVDataset(file_path=csv_path)
 
 
 class TestExcelFile:
@@ -128,6 +129,25 @@ class TestExcelFile:
         p1, p2 = _create_wav(tmp_path / "a.wav"), _create_wav(tmp_path / "b.wav")
         xlsx_path = tmp_path / "data.xlsx"
         pd.DataFrame({"path": [str(p1), str(p2)], "label": ["speech", "music"]}).to_excel(xlsx_path, index=False)
-        ds = AudioCSVXLSXDataset(file_path=xlsx_path)
+        ds = AudioCSVDataset(file_path=xlsx_path)
         assert len(ds) == 2
         assert ds.class_to_idx == {"music": 0, "speech": 1}
+
+
+class TestSkippedRows:
+    def test_blank_cells_are_skipped_with_a_warning(self, tmp_path, tmp_csv_factory):
+        p1 = _create_wav(tmp_path / "a.wav")
+        p2 = _create_wav(tmp_path / "b.wav")
+        csv_path = tmp_csv_factory(
+            "data.csv",
+            [
+                {"path": str(p1), "label": "speech"},
+                {"path": str(p2), "label": None},
+                {"path": None, "label": "music"},
+            ],
+        )
+        with pytest.warns(UserWarning, match=r"Skipped 2 of 3 row\(s\)") as record:
+            ds = AudioCSVDataset(csv_path)
+        assert record[0].filename == __file__  # the warning points at the caller
+        assert len(ds) == 1
+        assert ds.class_to_idx == {"speech": 0}

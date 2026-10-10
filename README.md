@@ -1,44 +1,45 @@
 # torch-datasets
 
-Note: This is a placeholder release to reserve the package name. A proper release will follow soon.
+[![PyPI](https://img.shields.io/pypi/v/torch-custom-datasets)](https://pypi.org/project/torch-custom-datasets/)
+[![Python](https://img.shields.io/pypi/pyversions/torch-custom-datasets)](https://pypi.org/project/torch-custom-datasets/)
+[![Tests](https://github.com/Shubh-Goyal-07/torch-datasets/actions/workflows/tests.yml/badge.svg)](https://github.com/Shubh-Goyal-07/torch-datasets/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/Shubh-Goyal-07/torch-datasets/blob/main/LICENSE)
 
-**One toolkit for all your PyTorch data loading needs.**  
-_Still cooking — stay tuned!_
+**One toolkit for all your PyTorch data loading needs.**
 
 ---
 
 ## 🚀 Overview
 
-**torch-datasets** is a unified, flexible, and extensible toolkit for handling dataset loading in PyTorch. Whether you're working with images, text, audio, tabular data, or custom formats, `torch-datasets` aims to make your data loading pipeline simple, efficient, and scalable.
+**torch-datasets** gives you ready-made PyTorch datasets for the ways image, audio and tabular
+data are usually stored: one folder per class, one folder with the class in each file name,
+CSV/Excel files, and pandas DataFrames. On top of that it splits datasets into
+train/validation/test parts with their own transforms, and wraps them for contrastive, triplet
+and few-shot training.
 
-> 🔧 This project is currently under active development — stay tuned for updates and releases!
-
----
-
-## ✨ Features (Planned)
-
-- Built-in support for popular dataset formats (images, text, tabular, audio)
-- Easy-to-use wrappers for custom datasets
-- Fast data loading using multiprocessing and caching
-- Simple APIs for train/val/test splitting
-- Seamless integration with `torch.utils.data.DataLoader`
-- Directory-based loading with automatic labeling
-- Plugin system for extending dataset types
-- Designed with reproducibility and best practices in mind
+Every dataset is a regular `torch.utils.data.Dataset`, so it works with `DataLoader`,
+samplers and your own transforms.
 
 ---
 
-## Installation
-
-**Coming soon to PyPI!**
-
-For now, you can install the development version directly from source:
+## 📦 Installation
 
 ```bash
-git clone https://github.com/Shubh-Goyal-07/torch-datasets.git
-cd torch-datasets
-pip install -e .
-````
+pip install torch-custom-datasets
+```
+
+The package is installed as `torch-custom-datasets` and imported as `torchdatasets`. It needs
+Python 3.10 or newer and PyTorch 2.1 or newer (with torchvision and torchaudio), which pip installs
+if they are missing. For a CUDA build of PyTorch, install PyTorch first by following
+[pytorch.org](https://pytorch.org/get-started/locally/).
+
+Excel files: `.xlsx` works out of the box; old `.xls` files also need `pip install xlrd`.
+
+To install the latest development version from GitHub instead:
+
+```bash
+pip install git+https://github.com/Shubh-Goyal-07/torch-datasets.git
+```
 
 ---
 
@@ -49,7 +50,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
 
-from torchdatasets.image.classification.from_subdir import ImageSubdirDataset
+from torchdatasets.image import ImageSubdirDataset
 
 # Images are loaded as uint8 tensors of shape [3, H, W], so use torchvision.transforms.v2
 # (v2.ToDtype(..., scale=True) takes the place of the old ToTensor())
@@ -73,65 +74,199 @@ for images, labels in dataloader:
 
 > **Batching:** some datasets can return samples of different shapes (multi-label labels,
 > audio clips of different lengths, images of different sizes), which the default
-> `DataLoader` can't stack. See [BATCHING.md](BATCHING.md) for what to watch for and
-> example `collate_fn`s.
+> `DataLoader` can't stack. See
+> [BATCHING.md](https://github.com/Shubh-Goyal-07/torch-datasets/blob/main/BATCHING.md) for what
+> to watch for and example `collate_fn`s.
 
-### Available datasets
+---
+
+## 📚 Available datasets
 
 | Modality | Task | Data layout | Class | Import from |
 | -------- | ---- | ----------- | ----- | ----------- |
-| Image | Classification | One folder per class | `ImageSubdirDataset` | `torchdatasets.image.classification.from_subdir` |
-| Image | Classification (single / multi-label) | CSV or Excel file of paths and labels | `ImageCSVXLSXDataset` | `torchdatasets.image.classification.from_csv` |
-| Image | Segmentation | One folder: `img.jpg` + `img{suffix}.png` | `ImageSegSingleDirDataset` | `torchdatasets.image.segmentation.from_singledir` |
-| Image | Segmentation | `images/` + `masks/` folders | `ImageSegMultidirDataset` | `torchdatasets.image.segmentation.from_multidir` |
-| Image | Segmentation | CSV or Excel file of image and mask paths | `ImageSegCSVXLSXDataset` | `torchdatasets.image.segmentation.from_csv` |
-| Audio | Classification | One folder per class | `AudioSubdirDataset` | `torchdatasets.audio.classification.from_subdir` |
-| Audio | Classification (single / multi-label) | CSV or Excel file of paths and labels | `AudioCSVXLSXDataset` | `torchdatasets.audio.classification.from_csv` |
-| Tabular | Classification / regression | pandas DataFrame | `TabularDatasetFromDataFrame` | `torchdatasets.tabular` |
-| Tabular | Classification / regression | CSV or Excel file | `TabularDatasetFromCSVXLSX` | `torchdatasets.tabular` |
+| Image | Classification | One folder per class | `ImageSubdirDataset` | `torchdatasets.image` |
+| Image | Classification | One folder, class in the file name (`cat_001.jpg`) | `ImageSingleDirDataset` | `torchdatasets.image` |
+| Image | Classification (single / multi-label) | CSV or Excel file of paths and labels | `ImageCSVDataset` | `torchdatasets.image` |
+| Image | Segmentation | One folder: `img.jpg` + `img{suffix}.png` | `ImageSegSingleDirDataset` | `torchdatasets.image` |
+| Image | Segmentation | `images/` + `masks/` folders | `ImageSegMultiDirDataset` | `torchdatasets.image` |
+| Image | Segmentation | CSV or Excel file with `image` and `mask` path columns | `ImageSegCSVDataset` | `torchdatasets.image` |
+| Audio | Classification | One folder per class | `AudioSubdirDataset` | `torchdatasets.audio` |
+| Audio | Classification | One folder, class in the file name (`speech_001.wav`) | `AudioSingleDirDataset` | `torchdatasets.audio` |
+| Audio | Classification (single / multi-label) | CSV or Excel file of paths and labels | `AudioCSVDataset` | `torchdatasets.audio` |
+| Tabular | Classification / regression | pandas DataFrame | `TabularDataFrameDataset` | `torchdatasets.tabular` |
+| Tabular | Classification / regression | CSV or Excel file | `TabularCSVDataset` | `torchdatasets.tabular` |
+
+One line per layout:
+
+```python
+from torchdatasets.audio import AudioSubdirDataset
+from torchdatasets.image import ImageCSVDataset, ImageSegMultiDirDataset, ImageSingleDirDataset
+
+photos = ImageSingleDirDataset("data/photos")                  # cat_001.jpg -> class "cat"
+tagged = ImageCSVDataset("labels.csv", label_sep=",")          # path,label columns; "cat,dog" -> 2 labels
+scenes = ImageSegMultiDirDataset("data/images", "data/masks")  # images/x.jpg + masks/x.png
+clips = AudioSubdirDataset("data/audio", sample_rate=16000)    # (waveform [channels, samples], label)
+```
+
+Image datasets return `uint8` tensors of shape `[3, H, W]` and audio datasets return `float32`
+waveforms of shape `[channels, samples]`. Pass `return_path=True` to get each sample's file path
+as a third item.
 
 Segmentation datasets return an image and its mask as torchvision `tv_tensors`, and call the
 transform as `transform(image, mask)`, so v2 transforms (flips, crops, resizes) are applied to
 both consistently.
 
+The single-folder classification datasets read the class from the part of the file name before
+the first `delimiter` (default `"_"`); pass `label_map={"cat": 0, "dog": 1}` to fix the class
+indices yourself.
+
+Classification and tabular datasets expose `targets`: the label of every sample, in index order,
+read without loading any files. Use it for class counts, weights or samplers:
+
+```python
+from torch.utils.data import WeightedRandomSampler
+
+targets = torch.tensor(dataset.targets)
+sample_weights = (1.0 / torch.bincount(targets).float())[targets]
+sampler = WeightedRandomSampler(sample_weights, num_samples=len(targets))
+dataloader = DataLoader(dataset, batch_size=32, sampler=sampler)
+```
+
+### What gets loaded
+
+- **Folders:** only files with an allowed extension are read (compared case-insensitively; change
+  them with `extensions=[...]`). The defaults are `.jpg .jpeg .png .bmp .tiff .tif .webp` for
+  images and `.wav .mp3 .flac .ogg` for audio. Hidden files and folders (names starting with
+  `.`, such as `.DS_Store`, macOS `._photo.jpg` files or `.ipynb_checkpoints`) are skipped, and
+  names are sorted case-sensitively (`Cat` before `bird`, as in torchvision's `ImageFolder`), so
+  samples and class indices are the same on every OS.
+- **CSV/Excel files of paths** (image, audio and segmentation datasets): a row with an empty
+  cell, or whose file is missing or has another extension, is skipped, and you get one warning
+  saying how many rows were skipped. Image and audio paths are used as written (relative paths
+  start from the current working directory); segmentation paths are relative to the CSV/Excel
+  file's own folder. Cells are read as text, exactly as written apart from surrounding spaces:
+  `007` and `7` are different labels, and a label such as `NA` or `None` is kept.
+- **Paths** can contain any characters, including non-ASCII ones on Windows.
+- **Errors:** if a dataset can't find anything to load (a missing folder, no files with the
+  allowed extensions, no usable CSV row) it raises `FileNotFoundError`; a CSV/Excel file without
+  the expected columns, or an invalid value, raises `ValueError`; an argument of the wrong type
+  raises `TypeError`.
+
+---
+
+## 📊 Tabular data
+
 For tabular data, build validation/test sets with `fit_from` so they reuse the training set's
 fitted preprocessing (fill values, category encoding, scaling, label mapping):
 
 ```python
-from torchdatasets.tabular import TabularDatasetFromCSVXLSX
+from torchdatasets.tabular import TabularCSVDataset
 
-train_ds = TabularDatasetFromCSVXLSX("train.csv", target_cols="label")
-val_ds = TabularDatasetFromCSVXLSX("val.csv", fit_from=train_ds)
+train_ds = TabularCSVDataset("train.csv", target_cols="label")
+val_ds = TabularCSVDataset("val.csv", fit_from=train_ds)
 ```
+
+Class labels are numbered in sorted order; pass `label_map={"low": 0, "medium": 1, "high": 2}` to
+choose the numbers yourself (for example, for ordered classes).
+
+---
+
+## ✂️ Splitting into train / validation / test
+
+`train_val_split` and `train_val_test_split` give every part its own transform, and keep the class
+proportions with `stratify=True` (which reads `targets`):
+
+```python
+from torchdatasets.utils import train_val_split
+
+train_ds, val_ds = train_val_split(
+    dataset, val_ratio=0.2, stratify=True,
+    train_transform=v2.Compose([v2.RandomResizedCrop((224, 224)), v2.ToDtype(torch.float32, scale=True)]),
+    val_transform=transform,
+)
+```
+
+A part's transform replaces the dataset's own transform. Leave it as `None` to keep the dataset's,
+or set `val_ds.transform = None` afterwards to drop it.
+
+A tabular dataset is split by rows and rebuilt: the training part fits the preprocessing on its own
+rows and the other parts reuse it through `fit_from`, so nothing about the validation rows leaks
+into training. Every part keeps the whole dataset's class numbers. If a class ends up with no
+training samples (possible without `stratify`), you get a warning. Splits are reproducible
+(`random_state=42` by default).
+
+---
+
+## 🔗 Pairs, triplets and few-shot episodes
+
+The wrappers in `torchdatasets.metric_learning` work with any dataset that has single-label
+`targets` (image, audio or tabular, and splits of them):
+
+```python
+from torchdatasets.metric_learning import ContrastiveWrapper, FewShotWrapper, TripletWrapper
+
+pairs = ContrastiveWrapper(train_ds)        # ((x1, x2), 1 if same class else 0)
+triplets = TripletWrapper(train_ds)         # (anchor, positive, negative)
+episodes = FewShotWrapper(train_ds, n_way=2, k_shot=5, q_query=5)
+
+pair_loader = DataLoader(pairs, batch_size=32, shuffle=True)
+anchor, positive, negative = triplets[0]
+support_set, query_set = episodes[0]        # lists of (sample, label), labels 0..n_way-1
+episode_loader = DataLoader(episodes, batch_size=None)  # episodes are lists, so don't batch them
+```
+
+Partners are drawn again on every access; pass `random_state=...` to fix them per index (for
+example, a fixed set of validation pairs or evaluation episodes).
+
+---
+
+## 🔒 API stability
+
+From 1.0, the public API (everything importable from `torchdatasets.image`, `torchdatasets.audio`,
+`torchdatasets.tabular`, `torchdatasets.metric_learning` and `torchdatasets.utils`) follows
+[semantic versioning](https://semver.org/): no breaking changes before 2.0. Modules under
+`torchdatasets._internal` are private.
+
+Only the data itself can be passed by position: the folder, file or DataFrame to load (the image
+and mask folders for `ImageSegMultiDirDataset`), or the dataset to split or wrap (with its indices,
+for `TransformSubset`). Every other argument is keyword-only, so write
+`ImageSubdirDataset("data/train", transform=transform)`, not
+`ImageSubdirDataset("data/train", transform)`.
+
+Upgrading from 0.0.3? The two classes it had moved from `torchdatasets.vision.classification` to
+`torchdatasets.image`, and images are now tensors rather than PIL images; see the
+[CHANGELOG](https://github.com/Shubh-Goyal-07/torch-datasets/blob/main/CHANGELOG.md).
 
 ---
 
 ## 🛠️ Project Status
 
-| Feature                  | Status         |
-| ------------------------ | -------------- |
-| Project initialized      | ✅ Complete     |
-| Image datasets           | 🚧 In Progress |
-| Tabular datasets         | 🚧 In Progress |
-| Text datasets            | ⏳ Planned      |
-| Audio datasets           | 🚧 In Progress |
-| Multimodal datasets      | ⏳ Planned      |
-| Benchmarking tools       | ⏳ Planned      |
+| Feature                                          | Status       |
+| ------------------------------------------------ | ------------ |
+| Image classification and segmentation datasets   | ✅ Available |
+| Audio classification datasets                    | ✅ Available |
+| Tabular datasets                                 | ✅ Available |
+| Train / validation / test splits                 | ✅ Available |
+| Pairs, triplets and few-shot episodes            | ✅ Available |
+| Text datasets                                    | ⏳ Planned   |
+| Multimodal datasets                              | ⏳ Planned   |
+| Benchmarking tools                               | ⏳ Planned   |
 
-Follow the repository for ongoing updates. Feature suggestions and pull requests are welcome!
+Feature suggestions and pull requests are welcome!
 
 ---
 
 ## 🤝 Contributing
 
-A full [CONTRIBUTING.md](CONTRIBUTING.md) is here.
+See [CONTRIBUTING.md](https://github.com/Shubh-Goyal-07/torch-datasets/blob/main/CONTRIBUTING.md)
+for how to set up a development install, run the tests and add a dataset.
 
 ---
 
 ## 📄 License
 
 This project is licensed under the **Apache License 2.0**.
-See the full [LICENSE](LICENSE) file for details.
+See the full [LICENSE](https://github.com/Shubh-Goyal-07/torch-datasets/blob/main/LICENSE) file for details.
 
 ---
 

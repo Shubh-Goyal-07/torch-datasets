@@ -12,6 +12,7 @@ class BaseAudioClassificationDataset(Dataset):
 
     def __init__(
             self,
+            *,
             transform: Optional[Callable] = None,
             return_path: bool = False,
             extensions: Optional[List[str]] = None,

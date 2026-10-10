@@ -5,7 +5,7 @@ import pytest
 from torch.utils.data import DataLoader
 
 from torchdatasets.metric_learning import TripletWrapper
-from torchdatasets.tabular import TabularDatasetFromDataFrame
+from torchdatasets.tabular import TabularDataFrameDataset
 
 
 def triplet_ids(wrapper, idx):
@@ -30,7 +30,7 @@ class TestTriplets:
 
     def test_tabular_rows(self):
         df = pd.DataFrame({"x": [0.0, 1.0, 2.0, 3.0], "label": ["a", "b", "a", "b"]})
-        anchor, positive, negative = TripletWrapper(TabularDatasetFromDataFrame(df, target_cols="label", scaling_type=None))[0]
+        anchor, positive, negative = TripletWrapper(TabularDataFrameDataset(df, target_cols="label", scaling_type=None))[0]
         assert (anchor.item(), positive.item(), negative.item())[:2] == (0.0, 2.0)
         assert negative.item() in (1.0, 3.0)
 

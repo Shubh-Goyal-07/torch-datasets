@@ -9,8 +9,8 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 
-from torchdatasets.image import ImageSegMultidirDataset, ImageSubdirDataset
-from torchdatasets.tabular import TabularDatasetFromCSVXLSX, TabularDatasetFromDataFrame
+from torchdatasets.image import ImageSegMultiDirDataset, ImageSubdirDataset
+from torchdatasets.tabular import TabularCSVDataset, TabularDataFrameDataset
 from torchdatasets.utils import TransformSubset, train_val_split, train_val_test_split
 
 
@@ -68,7 +68,7 @@ class TestTrainValSplit:
     def test_stratify_needs_targets(self, image_seg_paired_dirs):
         img_dir, mask_dir, _ = image_seg_paired_dirs
         with pytest.raises(TypeError, match="no `targets`"):
-            train_val_split(ImageSegMultidirDataset(img_dir, mask_dir), stratify=True)
+            train_val_split(ImageSegMultiDirDataset(img_dir, mask_dir), stratify=True)
 
     @pytest.mark.parametrize("labels", [[[0], [0, 1]] * 5, [0.5, 1.5] * 5])
     def test_stratify_rejects_multi_label_and_regression(self, toy_dataset, labels):
@@ -77,7 +77,7 @@ class TestTrainValSplit:
 
     def test_unstratified_split_needs_no_targets(self, image_seg_paired_dirs):
         img_dir, mask_dir, count = image_seg_paired_dirs
-        train, val = train_val_split(ImageSegMultidirDataset(img_dir, mask_dir), val_ratio=0.34)
+        train, val = train_val_split(ImageSegMultiDirDataset(img_dir, mask_dir), val_ratio=0.34)
         assert len(train) + len(val) == count
 
 
@@ -102,7 +102,7 @@ class TestMissingClassWarning:
         targets = [0] * 9 + [1]
         seed = rare_class_outside_training_seed(targets, 1, ratios=(0.2, 0.2))
         with pytest.warns(UserWarning, match="no samples in the training part"):
-            train_val_test_split(toy_dataset(targets), 0.2, 0.2, random_state=seed)
+            train_val_test_split(toy_dataset(targets), val_ratio=0.2, test_ratio=0.2, random_state=seed)
 
     def test_no_warning_when_every_class_is_in_training(self, toy_dataset, recwarn):
         train_val_split(toy_dataset([0, 1] * 10), stratify=True)
@@ -150,7 +150,7 @@ class TestPerSplitTransforms:
 
     def test_segmentation_transform_moves_mask_too(self, image_seg_paired_dirs):
         img_dir, mask_dir, _ = image_seg_paired_dirs
-        train, val = train_val_split(ImageSegMultidirDataset(img_dir, mask_dir), val_ratio=0.34,
+        train, val = train_val_split(ImageSegMultiDirDataset(img_dir, mask_dir), val_ratio=0.34,
                                      train_transform=v2.Resize((4, 4)))
         image, mask = train[0]
         assert image.shape == (3, 4, 4) and mask.shape == (1, 4, 4)
@@ -234,9 +234,9 @@ def tabular_df():
 
 class TestTabularSplit:
     def test_preprocessing_is_fitted_on_training_rows_only(self, tabular_df):
-        ds = TabularDatasetFromDataFrame(tabular_df, target_cols="label")
+        ds = TabularDataFrameDataset(tabular_df, target_cols="label")
         train, val = train_val_split(ds, val_ratio=0.25)
-        assert isinstance(train, TabularDatasetFromDataFrame) and isinstance(val, TabularDatasetFromDataFrame)
+        assert isinstance(train, TabularDataFrameDataset) and isinstance(val, TabularDataFrameDataset)
         train_x = train.dataframe["x"].to_numpy()
         assert train.scaler.mean_[0] == pytest.approx(train_x.mean())
         assert train.scaler.mean_[0] != pytest.approx(tabular_df["x"].mean())
@@ -246,7 +246,7 @@ class TestTabularSplit:
         assert torch.allclose(val.X[:, 0], torch.tensor(expected, dtype=torch.float32), atol=1e-5)
 
     def test_rows_and_labels_are_kept(self, tabular_df):
-        ds = TabularDatasetFromDataFrame(tabular_df, target_cols="label")
+        ds = TabularDataFrameDataset(tabular_df, target_cols="label")
         train, val = train_val_split(ds, val_ratio=0.25, stratify=True)
         assert sorted(list(train.dataframe.index) + list(val.dataframe.index)) == list(range(40))
         assert train.class_to_idx == val.class_to_idx == ds.class_to_idx
@@ -254,7 +254,7 @@ class TestTabularSplit:
         assert val.targets.count(ds.class_to_idx["b"]) == 5  # stratified: half of the 10 rows are "b"
 
     def test_transforms_carry_over(self, tabular_df):
-        ds = TabularDatasetFromDataFrame(tabular_df, target_cols="label", target_transform=lambda y: y + 10)
+        ds = TabularDataFrameDataset(tabular_df, target_cols="label", target_transform=lambda y: y + 10)
         train, val = train_val_split(ds, val_transform=lambda x: x * 0)
         assert int(train[0][1]) >= 10
         assert torch.all(val[0][0] == 0)
@@ -264,7 +264,7 @@ class TestTabularSplit:
 
     def test_class_only_in_validation_keeps_its_index_and_warns(self):
         df = pd.DataFrame({"x": np.arange(10, dtype=float), "label": ["a"] * 9 + ["rare"]})
-        ds = TabularDatasetFromDataFrame(df, target_cols="label")
+        ds = TabularDataFrameDataset(df, target_cols="label")
         seed = rare_class_outside_training_seed(ds.targets, 1)
         with pytest.warns(UserWarning, match=r"no samples in the training part \(e.g. \['rare'\]\)"):
             train, val = train_val_split(ds, val_ratio=0.3, random_state=seed)
@@ -272,32 +272,32 @@ class TestTabularSplit:
         assert 1 in val.targets and 1 not in train.targets
 
     def test_label_map_of_the_dataset_is_kept(self, tabular_df):
-        ds = TabularDatasetFromDataFrame(tabular_df, target_cols="label", label_map={"c": 0, "b": 1, "a": 2})
+        ds = TabularDataFrameDataset(tabular_df, target_cols="label", label_map={"c": 0, "b": 1, "a": 2})
         train, val = train_val_split(ds, stratify=True)
         assert train.class_to_idx == val.class_to_idx == {"c": 0, "b": 1, "a": 2}
         assert sorted(train.targets + val.targets) == sorted(ds.targets)
 
     def test_binned_targets_keep_training_bins(self):
         df = pd.DataFrame({"x": np.arange(20, dtype=float), "y": np.arange(20, dtype=float)})
-        ds = TabularDatasetFromDataFrame(df, target_cols="y", n_bins=2)
+        ds = TabularDataFrameDataset(df, target_cols="y", n_bins=2)
         train, val = train_val_split(ds, val_ratio=0.25, stratify=True)
         assert val.bin_edges is train.bin_edges and len(train.class_to_idx) == 2
 
     def test_dropped_duplicates_are_respected(self):
         df = pd.DataFrame({"x": [1.0, 1.0, 2.0, 3.0, 4.0, 5.0], "label": [0, 0, 1, 0, 1, 1]})
-        ds = TabularDatasetFromDataFrame(df, target_cols="label", drop_duplicates=True)
+        ds = TabularDataFrameDataset(df, target_cols="label", drop_duplicates=True)
         train, val = train_val_split(ds, val_ratio=0.4)
         assert len(ds) == 5 and len(train) + len(val) == 5
 
     def test_csv_dataset_splits_into_dataframe_datasets(self, tmp_path, tabular_df):
         tabular_df.to_csv(tmp_path / "data.csv", index=False)
-        ds = TabularDatasetFromCSVXLSX(tmp_path / "data.csv", target_cols="label", scaling_type=None)
+        ds = TabularCSVDataset(tmp_path / "data.csv", target_cols="label", scaling_type=None)
         train, val = train_val_split(ds)
-        assert type(train) is TabularDatasetFromDataFrame and train.scaling_type == "none"
+        assert type(train) is TabularDataFrameDataset and train.scaling_type == "none"
         assert len(train) + len(val) == 40
 
     def test_three_way_parts_share_the_training_fit(self, tabular_df):
-        ds = TabularDatasetFromDataFrame(tabular_df, target_cols="label")
+        ds = TabularDataFrameDataset(tabular_df, target_cols="label")
         train, val, test = train_val_test_split(ds, stratify=True)
         assert val.scaler is train.scaler and test.scaler is train.scaler
         assert val.label_encoders["color"] is train.label_encoders["color"]
@@ -305,7 +305,7 @@ class TestTabularSplit:
 
     def test_regression_split(self):
         df = pd.DataFrame({"x": np.arange(10, dtype=float), "y": np.linspace(0, 1, 10)})
-        ds = TabularDatasetFromDataFrame(df, target_cols="y", task="regression")
+        ds = TabularDataFrameDataset(df, target_cols="y", task="regression")
         train, val = train_val_split(ds)
         assert (len(train), len(val)) == (8, 2) and train.task == "regression"
         with pytest.raises(ValueError, match="integer class label"):

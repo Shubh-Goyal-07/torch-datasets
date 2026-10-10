@@ -1,16 +1,17 @@
 from pathlib import Path
 from typing import Any, List, Dict, Optional, Callable, Union
 
-from .from_dataframe import TabularDatasetFromDataFrame
+from .from_dataframe import TabularDataFrameDataset
 from torchdatasets._internal.io.common import load_csv_or_excel
 
 
-class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
+class TabularCSVDataset(TabularDataFrameDataset):
     """Tabular dataset from CSV or Excel file"""
     
     def __init__(
             self, 
             file_path: Union[str, Path],
+            *,
             target_cols: Optional[Union[str, List[str]]] = None,
             feature_cols: Optional[Union[str, List[str]]] = None,
             task: Optional[str] = 'classification',
@@ -25,7 +26,7 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             # Transform options
             transform: Optional[Callable] = None,
             target_transform: Optional[Callable] = None,
-            fit_from: Optional[TabularDatasetFromDataFrame] = None,
+            fit_from: Optional[TabularDataFrameDataset] = None,
             label_map: Optional[Dict[Any, int]] = None
         ) -> None:
         """Initialize the dataset from a CSV or Excel file.
@@ -44,7 +45,7 @@ class TabularDatasetFromCSVXLSX(TabularDatasetFromDataFrame):
             n_bins (int, optional): Number of bins to use for discretization. Defaults to 0. Only applicable when task is 'classification', otherwise it will be ignored.
             transform (Optional[Callable], optional): Optional transform to be applied to the features. Defaults to None.
             target_transform (Optional[Callable], optional): Optional transform to be applied to the targets. Defaults to None.
-            fit_from (Optional[TabularDatasetFromDataFrame], optional): An already-built dataset (e.g. the training set) whose
+            fit_from (Optional[TabularDataFrameDataset], optional): An already-built dataset (e.g. the training set) whose
                 fitted preprocessing, label encoding, columns, task and preprocessing options are reused. Defaults to None.
             label_map (Optional[Dict[Any, int]], optional): Class label -> class index, instead of numbering the sorted
                 labels (e.g. {"low": 0, "medium": 1, "high": 2}). Must cover every label; only for classification with

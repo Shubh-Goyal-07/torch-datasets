@@ -58,6 +58,23 @@ class TestExtensionFilter:
         assert len(ds) == 1
 
 
+class TestCaseSensitiveOrder:
+    def test_class_indices_follow_case_sensitive_name_order(self, tmp_path, tmp_image_factory):
+        """Same indices as torchvision's ImageFolder, on every OS (Windows included)."""
+        for name in ["bird/0.png", "Cat/0.png", "dog/0.png"]:
+            tmp_image_factory(name)
+        assert ImageSubdirDataset(tmp_path).class_to_idx == {"Cat": 0, "bird": 1, "dog": 2}
+
+
+class TestDefaultExtensions:
+    def test_tif_and_webp_are_loaded_by_default(self, tmp_path, tmp_image_factory):
+        for name in ["cat/a.tif", "cat/b.tiff", "dog/c.webp", "dog/d.jpeg"]:
+            tmp_image_factory(name)
+        ds = ImageSubdirDataset(tmp_path)
+        assert len(ds) == 4
+        assert all(ds[i][0].shape == (3, 8, 8) for i in range(4))
+
+
 class TestErrorCases:
     def test_empty_dir_raises(self, tmp_path):
         (tmp_path / "empty_class").mkdir()
@@ -85,3 +102,17 @@ class TestOrdering:
             tmp_image_factory(f"cls/{name}")
         ds = ImageSubdirDataset(root_dir=tmp_path)
         assert [p.name for p, _ in ds.samples] == ["a.png", "b.png", "c.png"]
+
+
+class TestHiddenFiles:
+    def test_hidden_folders_and_files_are_ignored(self, image_subdir_tree):
+        root, classes = image_subdir_tree
+        (root / ".ipynb_checkpoints").mkdir()
+        (root / ".ipynb_checkpoints" / "img_0.png").write_bytes(b"not an image")
+        (root / "cat" / "._img_0.png").write_bytes(b"macOS metadata")
+        (root / "cat" / ".DS_Store").write_bytes(b"")
+        ds = ImageSubdirDataset(root)
+        assert sorted(ds.class_to_idx) == sorted(classes)
+        assert len(ds) == sum(classes.values())
+        for i in range(len(ds)):
+            ds[i]  # every kept file is a real image

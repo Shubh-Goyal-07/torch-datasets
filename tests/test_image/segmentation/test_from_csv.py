@@ -1,9 +1,9 @@
-"""Tests for ImageSegCSVXLSXDataset — loads segmentation pairs from CSV."""
+"""Tests for ImageSegCSVDataset — loads segmentation pairs from CSV."""
 
 import torch
 import pytest
 
-from torchdatasets.image.segmentation.from_csv import ImageSegCSVXLSXDataset
+from torchdatasets.image.segmentation.from_csv import ImageSegCSVDataset
 
 
 class TestBasicLoading:
@@ -14,7 +14,7 @@ class TestBasicLoading:
             "data.csv",
             [{"image": str(img.relative_to(tmp_path)), "mask": str(mask.relative_to(tmp_path))}],
         )
-        ds = ImageSegCSVXLSXDataset(file_path=csv_path)
+        ds = ImageSegCSVDataset(file_path=csv_path)
         assert len(ds) == 1
 
     def test_getitem_returns_tensors(self, tmp_path, tmp_image_factory, tmp_mask_factory, tmp_csv_factory):
@@ -24,7 +24,7 @@ class TestBasicLoading:
             "data.csv",
             [{"image": str(img.relative_to(tmp_path)), "mask": str(mask.relative_to(tmp_path))}],
         )
-        ds = ImageSegCSVXLSXDataset(file_path=csv_path)
+        ds = ImageSegCSVDataset(file_path=csv_path)
         image_out, mask_out = ds[0]
         assert isinstance(image_out, torch.Tensor)
         assert isinstance(mask_out, torch.Tensor)
@@ -38,13 +38,13 @@ class TestCustomColumns:
             "data.csv",
             [{"img": str(img.relative_to(tmp_path)), "msk": str(mask.relative_to(tmp_path))}],
         )
-        ds = ImageSegCSVXLSXDataset(file_path=csv_path, image_col="img", mask_col="msk")
+        ds = ImageSegCSVDataset(file_path=csv_path, image_col="img", mask_col="msk")
         assert len(ds) == 1
 
     def test_default_columns_are_image_and_mask(self):
         import inspect
 
-        params = inspect.signature(ImageSegCSVXLSXDataset.__init__).parameters
+        params = inspect.signature(ImageSegCSVDataset.__init__).parameters
         assert params["image_col"].default == "image"
         assert params["mask_col"].default == "mask"
 
@@ -57,7 +57,7 @@ class TestReturnPath:
             "data.csv",
             [{"image": str(img.relative_to(tmp_path)), "mask": str(mask.relative_to(tmp_path))}],
         )
-        ds = ImageSegCSVXLSXDataset(file_path=csv_path, return_path=True)
+        ds = ImageSegCSVDataset(file_path=csv_path, return_path=True)
         result = ds[0]
         assert len(result) == 3
 
@@ -69,18 +69,18 @@ class TestErrors:
             [{"image": "nonexistent.png", "mask": "nonexistent_mask.png"}],
         )
         with pytest.raises(FileNotFoundError, match="No valid entries"):
-            ImageSegCSVXLSXDataset(file_path=csv_path)
+            ImageSegCSVDataset(file_path=csv_path)
 
     def test_missing_columns_raises(self, tmp_path, tmp_csv_factory):
         csv_path = tmp_csv_factory("data.csv", [{"x": 1, "y": 2}])
         with pytest.raises(ValueError, match="image.*mask"):
-            ImageSegCSVXLSXDataset(file_path=csv_path)
+            ImageSegCSVDataset(file_path=csv_path)
 
     def test_old_default_column_names_raise_clear_error(self, tmp_path, tmp_csv_factory):
         """A file written for the old defaults (path/label) names the columns it needs."""
         csv_path = tmp_csv_factory("data.csv", [{"path": "a.png", "label": "a_mask.png"}])
         with pytest.raises(ValueError, match=r"\['image', 'mask'\]"):
-            ImageSegCSVXLSXDataset(file_path=csv_path)
+            ImageSegCSVDataset(file_path=csv_path)
 
 
 class TestMaskValidation:
@@ -98,7 +98,8 @@ class TestMaskValidation:
                 {"image": "images/orphan.png", "mask": "masks/missing.png"},
             ],
         )
-        ds = ImageSegCSVXLSXDataset(file_path=csv_path)
+        with pytest.warns(UserWarning, match=r"Skipped 1 of 2 row\(s\).*images/orphan\.png"):
+            ds = ImageSegCSVDataset(file_path=csv_path)
         assert len(ds) == 1
         assert ds.samples[0][1] == mask_ok.resolve()
 
@@ -116,7 +117,8 @@ class TestMaskValidation:
                 {"image": "images/b.png", "mask": "masks/b.txt"},
             ],
         )
-        ds = ImageSegCSVXLSXDataset(file_path=csv_path)
+        with pytest.warns(UserWarning, match=r"Skipped 1 of 2 row\(s\)"):
+            ds = ImageSegCSVDataset(file_path=csv_path)
         assert len(ds) == 1
 
     def test_all_masks_missing_raises(self, tmp_path, tmp_image_factory, tmp_csv_factory):
@@ -125,7 +127,7 @@ class TestMaskValidation:
             "data.csv", [{"image": "images/a.png", "mask": "masks/missing.png"}]
         )
         with pytest.raises(FileNotFoundError, match="No valid entries"):
-            ImageSegCSVXLSXDataset(file_path=csv_path)
+            ImageSegCSVDataset(file_path=csv_path)
 
 
 class TestExcelFile:
@@ -135,5 +137,31 @@ class TestExcelFile:
         tmp_mask_factory("masks/a.png")
         xlsx_path = tmp_path / "data.xlsx"
         pd.DataFrame({"image": ["images/a.png"], "mask": ["masks/a.png"]}).to_excel(xlsx_path, index=False)
-        ds = ImageSegCSVXLSXDataset(file_path=xlsx_path)
+        ds = ImageSegCSVDataset(file_path=xlsx_path)
+        assert len(ds) == 1
+
+
+class TestSkippedRows:
+    def test_blank_cells_are_skipped_with_a_warning(self, tmp_image_factory, tmp_mask_factory, tmp_csv_factory):
+        tmp_image_factory("images/a.png")
+        tmp_mask_factory("masks/a.png")
+        tmp_image_factory("images/b.png")
+        csv_path = tmp_csv_factory(
+            "data.csv",
+            [
+                {"image": "images/a.png", "mask": "masks/a.png"},
+                {"image": "images/b.png", "mask": None},
+                {"image": None, "mask": "masks/a.png"},
+            ],
+        )
+        with pytest.warns(UserWarning, match=r"Skipped 2 of 3 row\(s\)") as record:
+            ds = ImageSegCSVDataset(csv_path)
+        assert record[0].filename == __file__  # the warning points at the caller
+        assert len(ds) == 1
+
+    def test_paths_with_spaces_around_them_are_found(self, tmp_image_factory, tmp_mask_factory, tmp_csv_factory):
+        tmp_image_factory("images/a.png")
+        tmp_mask_factory("masks/a.png")
+        csv_path = tmp_csv_factory("data.csv", [{"image": " images/a.png", "mask": "masks/a.png "}])
+        ds = ImageSegCSVDataset(csv_path)
         assert len(ds) == 1

@@ -169,12 +169,12 @@ def image_seg_single_dir(tmp_path: Path, tmp_image_factory, tmp_mask_factory):
     """Creates a single directory with images and their mask counterparts
     identified by a suffix (e.g. ``img`` and ``img_mask``).
 
-    Returns (src_dir, suffix, expected_count).
+    Returns (root_dir, suffix, expected_count).
     """
     suffix = "_mask"
     names = ["a", "b"]
     for name in names:
         tmp_image_factory(f"seg/{name}.png")
         tmp_mask_factory(f"seg/{name}{suffix}.png")
-    src_dir = tmp_path / "seg"
-    return src_dir, suffix, len(names)
+    root_dir = tmp_path / "seg"
+    return root_dir, suffix, len(names)

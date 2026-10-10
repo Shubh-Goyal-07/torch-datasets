@@ -23,6 +23,7 @@ class BaseTabularDataset(Dataset):
 
     def __init__(
         self,
+        *,
         handle_missing: bool = True,
         fill_missing: str = 'mean',
         scaling_type: Optional[str] = 'standard',

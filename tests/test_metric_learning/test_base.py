@@ -4,9 +4,9 @@ import pandas as pd
 import pytest
 from torch.utils.data import ConcatDataset, Subset
 
-from torchdatasets.image import ImageSegMultidirDataset
+from torchdatasets.image import ImageSegMultiDirDataset
 from torchdatasets.metric_learning import BaseMetricLearningWrapper, ContrastiveWrapper
-from torchdatasets.tabular import TabularDatasetFromDataFrame
+from torchdatasets.tabular import TabularDataFrameDataset
 from torchdatasets.utils import train_val_split
 
 
@@ -26,13 +26,13 @@ class TestLabels:
 
     def test_works_on_tabular_classification(self):
         df = pd.DataFrame({"x": [0.1, 0.2, 0.3, 0.4], "label": ["cat", "dog", "cat", "dog"]})
-        wrapper = BaseMetricLearningWrapper(TabularDatasetFromDataFrame(df, target_cols="label"))
+        wrapper = BaseMetricLearningWrapper(TabularDataFrameDataset(df, target_cols="label"))
         assert wrapper.class_to_indices == {0: [0, 2], 1: [1, 3]}
 
     def test_needs_targets(self, image_seg_paired_dirs):
         img_dir, mask_dir, _ = image_seg_paired_dirs
         with pytest.raises(TypeError, match="no `targets`"):
-            BaseMetricLearningWrapper(ImageSegMultidirDataset(img_dir, mask_dir))
+            BaseMetricLearningWrapper(ImageSegMultiDirDataset(img_dir, mask_dir))
 
     @pytest.mark.parametrize("labels", [[[0], [0, 1]], [0.5, 1.5]])
     def test_rejects_multi_label_and_regression(self, toy_dataset, labels):

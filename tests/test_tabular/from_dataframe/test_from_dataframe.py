@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import torch
-from torchdatasets.tabular.from_dataframe import TabularDatasetFromDataFrame
+from torchdatasets.tabular.from_dataframe import TabularDataFrameDataset
 
 
 def create_sample_dataframe():
@@ -17,11 +17,11 @@ def create_sample_dataframe():
     })
 
 
-class TestTabularDatasetFromDataFrame:
+class TestTabularDataFrameDataset:
 
     def test_basic_classification(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature1', 'num_feature2', 'cat_feature1'],
@@ -37,7 +37,7 @@ class TestTabularDatasetFromDataFrame:
 
     def test_basic_regression(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_reg',
             feature_cols=['num_feature1', 'num_feature2'],
@@ -50,7 +50,7 @@ class TestTabularDatasetFromDataFrame:
 
     def test_missing_values_handling(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['missing_feature'],
@@ -62,7 +62,7 @@ class TestTabularDatasetFromDataFrame:
 
     def test_scaling_standard(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature2'],
@@ -76,7 +76,7 @@ class TestTabularDatasetFromDataFrame:
 
     def test_scaling_minmax(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature2'],
@@ -89,7 +89,7 @@ class TestTabularDatasetFromDataFrame:
 
     def test_categorical_encoding(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['cat_feature1'],
@@ -102,7 +102,7 @@ class TestTabularDatasetFromDataFrame:
 
     def test_n_bins_classification(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_reg',  # continuous target
             task='classification',
@@ -113,7 +113,7 @@ class TestTabularDatasetFromDataFrame:
 
     def test_auto_detect_features(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class'
         )
@@ -122,7 +122,7 @@ class TestTabularDatasetFromDataFrame:
     def test_invalid_task(self):
         df = create_sample_dataframe()
         with pytest.raises(ValueError):
-            TabularDatasetFromDataFrame(
+            TabularDataFrameDataset(
                 dataframe=df,
                 target_cols='target_class',
                 task='clustering'
@@ -131,7 +131,7 @@ class TestTabularDatasetFromDataFrame:
     def test_missing_target(self):
         df = create_sample_dataframe()
         with pytest.raises(ValueError):
-            TabularDatasetFromDataFrame(
+            TabularDataFrameDataset(
                 dataframe=df,
                 target_cols='nonexistent_target'
             )
@@ -145,7 +145,7 @@ class TestFillMissingStrategies:
 
     def test_fill_missing_median(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['missing_feature'],
@@ -157,7 +157,7 @@ class TestFillMissingStrategies:
 
     def test_fill_missing_mode(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['missing_feature'],
@@ -169,7 +169,7 @@ class TestFillMissingStrategies:
 
     def test_fill_missing_constant_numeric_fills_zero(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['missing_feature'],
@@ -187,7 +187,7 @@ class TestFillMissingStrategies:
             'target': [0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
         })
         # Non-numeric NaN filled with 'unknown', then label-encoded
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target',
             feature_cols=['cat_with_nan'],
@@ -199,7 +199,7 @@ class TestFillMissingStrategies:
 
     def test_handle_missing_false_preserves_nan(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['missing_feature'],
@@ -217,7 +217,7 @@ class TestScalingOptions:
 
     def test_scaling_none_preserves_raw_values(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature2'],
@@ -229,7 +229,7 @@ class TestScalingOptions:
     def test_scaling_partial_features(self):
         df = create_sample_dataframe()
         # Scale only num_feature1; num_feature2 (mean ≈ 50) should be unchanged
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature1', 'num_feature2'],
@@ -253,7 +253,7 @@ class TestDropDuplicates:
             'f1': [1.0, 1.0, 2.0, 3.0, 3.0],
             'target': [0, 0, 1, 1, 1],
         })
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target',
             feature_cols=['f1'],
@@ -267,7 +267,7 @@ class TestDropDuplicates:
             'f1': [1.0, 1.0, 2.0],
             'target': [0, 0, 1],
         })
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target',
             feature_cols=['f1'],
@@ -279,15 +279,15 @@ class TestDropDuplicates:
     def test_default_keeps_duplicate_rows(self):
         """Duplicates are only dropped on request, same default as BaseTabularDataset."""
         df = pd.DataFrame({'f1': [1.0, 1.0, 2.0], 'target': [0, 0, 1]})
-        dataset = TabularDatasetFromDataFrame(df, target_cols='target')
+        dataset = TabularDataFrameDataset(df, target_cols='target')
         assert len(dataset) == 3
         assert dataset.drop_duplicates is False
 
     def test_fit_from_does_not_drop_val_duplicates_by_default(self):
         train = pd.DataFrame({'f1': [1.0, 2.0, 3.0], 'target': [0, 1, 1]})
         val = pd.DataFrame({'f1': [2.0, 2.0], 'target': [1, 1]})
-        train_ds = TabularDatasetFromDataFrame(train, target_cols='target')
-        val_ds = TabularDatasetFromDataFrame(val, fit_from=train_ds)
+        train_ds = TabularDataFrameDataset(train, target_cols='target')
+        val_ds = TabularDataFrameDataset(val, fit_from=train_ds)
         assert len(val_ds) == 2
 
 
@@ -299,7 +299,7 @@ class TestTargets:
 
     def test_class_targets_match_getitem(self):
         df = pd.DataFrame({'f1': [0.1, 0.2, 0.3, 0.4], 'label': ['dog', 'cat', 'dog', 'bird']})
-        dataset = TabularDatasetFromDataFrame(df, target_cols='label')
+        dataset = TabularDataFrameDataset(df, target_cols='label')
         targets = dataset.targets
         assert targets == [dataset.class_to_idx[v] for v in ['dog', 'cat', 'dog', 'bird']]
         assert all(type(t) is int for t in targets)
@@ -307,17 +307,17 @@ class TestTargets:
 
     def test_regression_targets_are_floats(self):
         df = pd.DataFrame({'f1': [0.1, 0.2], 'y': [1.5, 2.5]})
-        dataset = TabularDatasetFromDataFrame(df, target_cols='y', task='regression')
+        dataset = TabularDataFrameDataset(df, target_cols='y', task='regression')
         assert dataset.targets == [1.5, 2.5]
 
     def test_multi_column_targets_are_lists(self):
         df = pd.DataFrame({'f1': [0.1, 0.2], 'a': [1, 0], 'b': [0, 1]})
-        dataset = TabularDatasetFromDataFrame(df, target_cols=['a', 'b'])
+        dataset = TabularDataFrameDataset(df, target_cols=['a', 'b'])
         assert dataset.targets == [[1.0, 0.0], [0.0, 1.0]]
 
     def test_targets_ignore_target_transform(self):
         df = pd.DataFrame({'f1': [0.1, 0.2], 'label': [0, 1]})
-        dataset = TabularDatasetFromDataFrame(df, target_cols='label', target_transform=lambda y: y + 10)
+        dataset = TabularDataFrameDataset(df, target_cols='label', target_transform=lambda y: y + 10)
         assert dataset.targets == [0, 1]
         assert int(dataset[1][1]) == 11
 
@@ -336,7 +336,7 @@ class TestMultiColumnTargets:
             't1': np.random.rand(10),
             't2': np.random.rand(10),
         })
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols=['t1', 't2'],
             task='regression',
@@ -351,7 +351,7 @@ class TestMultiColumnTargets:
             't1': np.random.rand(10),
             't2': np.random.rand(10),
         })
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols=['t1', 't2'],
             task='regression',
@@ -361,7 +361,7 @@ class TestMultiColumnTargets:
 
     def test_single_target_regression_info_num_targets(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_reg',
             task='regression',
@@ -376,7 +376,7 @@ class TestMultiColumnTargets:
             'label1': np.random.randint(0, 2, 10).astype(float),
             'label2': np.random.randint(0, 2, 10).astype(float),
         })
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols=['label1', 'label2'],
             task='classification',
@@ -391,7 +391,7 @@ class TestMultiColumnTargets:
             'label1': np.random.randint(0, 2, 10).astype(float),
             'label2': np.random.randint(0, 2, 10).astype(float),
         })
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols=['label1', 'label2'],
             task='classification',
@@ -409,7 +409,7 @@ class TestEncodingOptions:
 
     def test_encode_categorical_false_with_numeric_only(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature1', 'num_feature2'],
@@ -421,7 +421,7 @@ class TestEncodingOptions:
         """String columns must raise when encode_categorical=False (can't cast to float)."""
         df = create_sample_dataframe()
         with pytest.raises(Exception):
-            TabularDatasetFromDataFrame(
+            TabularDataFrameDataset(
                 dataframe=df,
                 target_cols='target_class',
                 feature_cols=['cat_feature1'],
@@ -437,7 +437,7 @@ class TestValidationAndEdgeCases:
 
     def test_invalid_dataframe_type_raises_type_error(self):
         with pytest.raises(TypeError):
-            TabularDatasetFromDataFrame(
+            TabularDataFrameDataset(
                 dataframe={'a': [1, 2]},   # not a DataFrame
                 target_cols='a',
             )
@@ -445,7 +445,7 @@ class TestValidationAndEdgeCases:
     def test_invalid_fill_missing_raises(self):
         df = create_sample_dataframe()
         with pytest.raises(ValueError):
-            TabularDatasetFromDataFrame(
+            TabularDataFrameDataset(
                 dataframe=df,
                 target_cols='target_class',
                 fill_missing='interpolate',
@@ -454,7 +454,7 @@ class TestValidationAndEdgeCases:
     def test_invalid_scaling_type_raises(self):
         df = create_sample_dataframe()
         with pytest.raises(ValueError):
-            TabularDatasetFromDataFrame(
+            TabularDataFrameDataset(
                 dataframe=df,
                 target_cols='target_class',
                 scaling_type='robust',
@@ -463,7 +463,7 @@ class TestValidationAndEdgeCases:
     def test_missing_feature_col_raises(self):
         df = create_sample_dataframe()
         with pytest.raises(ValueError):
-            TabularDatasetFromDataFrame(
+            TabularDataFrameDataset(
                 dataframe=df,
                 target_cols='target_class',
                 feature_cols=['nonexistent_col'],
@@ -472,7 +472,7 @@ class TestValidationAndEdgeCases:
     def test_n_bins_ignored_for_regression(self):
         """n_bins must be silently ignored when task='regression'."""
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_reg',
             task='regression',
@@ -483,7 +483,7 @@ class TestValidationAndEdgeCases:
     def test_empty_dataframe_raises(self):
         df = pd.DataFrame({'f1': pd.Series([], dtype=float), 'target': pd.Series([], dtype=int)})
         with pytest.raises(Exception):
-            TabularDatasetFromDataFrame(
+            TabularDataFrameDataset(
                 dataframe=df,
                 target_cols='target',
                 feature_cols=['f1'],
@@ -498,7 +498,7 @@ class TestAttributesAndHelpers:
 
     def test_n_classes_attribute_set(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             task='classification',
@@ -508,7 +508,7 @@ class TestAttributesAndHelpers:
 
     def test_class_to_idx_keys_are_plain_int(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             task='classification',
@@ -519,7 +519,7 @@ class TestAttributesAndHelpers:
 
     def test_get_preprocessing_info_structure(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature1'],
@@ -535,7 +535,7 @@ class TestAttributesAndHelpers:
 
     def test_getitem_returns_tensor_tuple(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature1'],
@@ -548,7 +548,7 @@ class TestAttributesAndHelpers:
 
     def test_getitem_index_out_of_range(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             dataframe=df,
             target_cols='target_class',
             feature_cols=['num_feature1'],
@@ -565,7 +565,7 @@ class TestClassLabelEncoding:
 
     def test_string_labels_are_encoded(self):
         df = pd.DataFrame({'f1': [1.0, 2.0, 3.0, 4.0], 'y': ['cat', 'dog', 'cat', 'bird']})
-        dataset = TabularDatasetFromDataFrame(df, target_cols='y', drop_duplicates=False)
+        dataset = TabularDataFrameDataset(df, target_cols='y', drop_duplicates=False)
         assert dataset.class_to_idx == {'bird': 0, 'cat': 1, 'dog': 2}
         assert dataset.idx_to_class == {0: 'bird', 1: 'cat', 2: 'dog'}
         assert dataset.y.tolist() == [1, 2, 1, 0]
@@ -574,7 +574,7 @@ class TestClassLabelEncoding:
 
     def test_non_contiguous_int_labels_are_remapped(self):
         df = pd.DataFrame({'f1': [1.0, 2.0, 3.0, 4.0, 5.0], 'y': [3, 7, 3, 7, 10]})
-        dataset = TabularDatasetFromDataFrame(df, target_cols='y')
+        dataset = TabularDataFrameDataset(df, target_cols='y')
         assert dataset.class_to_idx == {3: 0, 7: 1, 10: 2}
         assert all(isinstance(k, int) for k in dataset.class_to_idx)
         assert dataset.y.tolist() == [0, 1, 0, 1, 2]
@@ -584,18 +584,18 @@ class TestClassLabelEncoding:
 
     def test_single_feature_col_as_string(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(df, target_cols='target_class', feature_cols='num_feature1')
+        dataset = TabularDataFrameDataset(df, target_cols='target_class', feature_cols='num_feature1')
         assert dataset.feature_cols == ['num_feature1']
         assert dataset.X.shape == (10, 1)
 
     def test_missing_target_values_raise(self):
         df = pd.DataFrame({'f1': [1.0, 2.0, 3.0], 'y': ['a', None, 'b']})
         with pytest.raises(ValueError, match="missing values"):
-            TabularDatasetFromDataFrame(df, target_cols='y')
+            TabularDataFrameDataset(df, target_cols='y')
 
     def test_scaling_type_none_is_accepted(self):
         df = create_sample_dataframe()
-        dataset = TabularDatasetFromDataFrame(
+        dataset = TabularDataFrameDataset(
             df, target_cols='target_class', feature_cols=['num_feature2'], scaling_type=None
         )
         raw = torch.tensor(df['num_feature2'].values, dtype=torch.float32)
@@ -617,9 +617,9 @@ class TestFitFrom:
         })
 
     def test_scaler_is_reused(self):
-        train = TabularDatasetFromDataFrame(self._train_df(), target_cols='y', feature_cols=['num'])
+        train = TabularDataFrameDataset(self._train_df(), target_cols='y', feature_cols=['num'])
         val_df = pd.DataFrame({'num': [100.0, 200.0], 'y': ['cat', 'dog']})
-        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        val = TabularDataFrameDataset(val_df, fit_from=train)
 
         assert val.scaler is train.scaler
         mean, std = 4.5, np.std(np.arange(10.0))  # StandardScaler uses the population std
@@ -627,71 +627,71 @@ class TestFitFrom:
         assert torch.allclose(val.X[:, 0], expected, atol=1e-4)
 
     def test_fill_values_are_reused(self):
-        train = TabularDatasetFromDataFrame(
+        train = TabularDataFrameDataset(
             self._train_df(), target_cols='y', feature_cols=['num'], scaling_type='none'
         )
         val_df = pd.DataFrame({'num': [np.nan, 50.0], 'y': ['cat', 'dog']})
-        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        val = TabularDataFrameDataset(val_df, fit_from=train)
         assert val.X[0, 0].item() == pytest.approx(4.5)  # train mean, not val mean (50)
 
     def test_category_encoding_is_reused(self):
-        train = TabularDatasetFromDataFrame(
+        train = TabularDataFrameDataset(
             self._train_df(), target_cols='y', feature_cols=['cat'], scaling_type='none'
         )
         val_df = pd.DataFrame({'cat': ['C', 'A'], 'y': ['cat', 'dog']})
-        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        val = TabularDataFrameDataset(val_df, fit_from=train)
         assert val.X[:, 0].tolist() == [2.0, 0.0]  # refitting would give [1, 0]
 
     def test_unseen_category_is_encoded_as_minus_one(self):
-        train = TabularDatasetFromDataFrame(
+        train = TabularDataFrameDataset(
             self._train_df(), target_cols='y', feature_cols=['cat'], scaling_type='none'
         )
         val_df = pd.DataFrame({'cat': ['Z', 'A'], 'y': ['cat', 'dog']})
         with pytest.warns(UserWarning, match="not seen during fitting"):
-            val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+            val = TabularDataFrameDataset(val_df, fit_from=train)
         assert val.X[:, 0].tolist() == [-1.0, 0.0]
 
     def test_label_encoding_is_reused(self):
-        train = TabularDatasetFromDataFrame(self._train_df(), target_cols='y')
+        train = TabularDataFrameDataset(self._train_df(), target_cols='y')
         val_df = pd.DataFrame({'num': [1.0], 'cat': ['A'], 'y': ['dog']})
-        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        val = TabularDataFrameDataset(val_df, fit_from=train)
         assert val.y.tolist() == [1]  # 'dog' keeps index 1 even though it is the only class here
         assert val.n_classes == 2
         assert val.class_to_idx == train.class_to_idx
 
     def test_unseen_target_label_raises(self):
-        train = TabularDatasetFromDataFrame(self._train_df(), target_cols='y')
+        train = TabularDataFrameDataset(self._train_df(), target_cols='y')
         val_df = pd.DataFrame({'num': [1.0], 'cat': ['A'], 'y': ['horse']})
         with pytest.raises(ValueError, match="not seen"):
-            TabularDatasetFromDataFrame(val_df, fit_from=train)
+            TabularDataFrameDataset(val_df, fit_from=train)
 
     def test_bin_edges_are_reused(self):
         df = pd.DataFrame({'f1': np.arange(11.0), 't': np.arange(11.0)})
-        train = TabularDatasetFromDataFrame(df, target_cols='t', task='classification', n_bins=2)
+        train = TabularDataFrameDataset(df, target_cols='t', task='classification', n_bins=2)
         val_df = pd.DataFrame({'f1': [0.0, 0.0, 0.0], 't': [-5.0, 2.0, 100.0]})
-        val = TabularDatasetFromDataFrame(val_df, fit_from=train)
+        val = TabularDataFrameDataset(val_df, fit_from=train)
         assert val.y.tolist() == [0, 0, 1]  # out-of-range values fall into the outer bins
         assert np.array_equal(val.bin_edges, train.bin_edges)
 
     def test_settings_and_columns_are_inherited(self):
-        train = TabularDatasetFromDataFrame(
+        train = TabularDataFrameDataset(
             self._train_df(), target_cols='y', feature_cols=['num'],
             task='classification', scaling_type='minmax', fill_missing='median',
         )
-        val = TabularDatasetFromDataFrame(self._train_df().head(3), fit_from=train)
+        val = TabularDataFrameDataset(self._train_df().head(3), fit_from=train)
         assert val.task == 'classification'
         assert val.scaling_type == 'minmax'
         assert val.fill_missing == 'median'
         assert val.feature_cols == ['num'] and val.target_cols == ['y']
 
     def test_mismatched_columns_raise(self):
-        train = TabularDatasetFromDataFrame(self._train_df(), target_cols='y', feature_cols=['num'])
+        train = TabularDataFrameDataset(self._train_df(), target_cols='y', feature_cols=['num'])
         with pytest.raises(ValueError, match="must match"):
-            TabularDatasetFromDataFrame(self._train_df(), feature_cols=['num', 'cat'], fit_from=train)
+            TabularDataFrameDataset(self._train_df(), feature_cols=['num', 'cat'], fit_from=train)
 
     def test_fit_from_must_be_a_dataset(self):
         with pytest.raises(TypeError):
-            TabularDatasetFromDataFrame(self._train_df(), target_cols='y', fit_from="train")
+            TabularDataFrameDataset(self._train_df(), target_cols='y', fit_from="train")
 
 
 # ---------------------------------------------------------------------------
@@ -705,30 +705,30 @@ class TestLabelMap:
         return pd.DataFrame({'x': [0.1, 0.2, 0.3, 0.4], 'level': ['low', 'high', 'medium', 'low']})
 
     def test_label_map_sets_the_indices(self):
-        dataset = TabularDatasetFromDataFrame(self._df(), target_cols='level',
+        dataset = TabularDataFrameDataset(self._df(), target_cols='level',
                                               label_map={'low': 0, 'medium': 1, 'high': 2})
         assert dataset.targets == [0, 2, 1, 0]
         assert dataset.idx_to_class == {0: 'low', 1: 'medium', 2: 'high'}
         assert dataset.n_classes == 3
 
     def test_label_map_may_list_extra_classes(self):
-        dataset = TabularDatasetFromDataFrame(self._df(), target_cols='level',
+        dataset = TabularDataFrameDataset(self._df(), target_cols='level',
                                               label_map={'low': 0, 'medium': 1, 'high': 2, 'extreme': 3})
         assert dataset.n_classes == 4 and 3 not in dataset.targets
 
     def test_label_missing_from_label_map_raises(self):
         with pytest.raises(ValueError, match="missing from label_map.*'medium'"):
-            TabularDatasetFromDataFrame(self._df(), target_cols='level', label_map={'low': 0, 'high': 1})
+            TabularDataFrameDataset(self._df(), target_cols='level', label_map={'low': 0, 'high': 1})
 
     def test_numeric_labels(self):
         df = pd.DataFrame({'x': [0.1, 0.2, 0.3], 'y': [5, 7, 5]})
-        dataset = TabularDatasetFromDataFrame(df, target_cols='y', label_map={7: 0, 5: 1})
+        dataset = TabularDataFrameDataset(df, target_cols='y', label_map={7: 0, 5: 1})
         assert dataset.targets == [1, 0, 1]
 
     def test_fit_from_keeps_the_label_map(self):
-        train = TabularDatasetFromDataFrame(self._df(), target_cols='level',
+        train = TabularDataFrameDataset(self._df(), target_cols='level',
                                             label_map={'low': 0, 'medium': 1, 'high': 2})
-        val = TabularDatasetFromDataFrame(self._df().iloc[:2], fit_from=train)
+        val = TabularDataFrameDataset(self._df().iloc[:2], fit_from=train)
         assert val.class_to_idx == train.class_to_idx and val.targets == [0, 2]
 
     @pytest.mark.parametrize("kwargs, message", [
@@ -738,13 +738,13 @@ class TestLabelMap:
     ])
     def test_label_map_needs_one_class_column(self, kwargs, message):
         with pytest.raises(ValueError, match=message):
-            TabularDatasetFromDataFrame(self._df(), label_map={'low': 0}, **kwargs)
+            TabularDataFrameDataset(self._df(), label_map={'low': 0}, **kwargs)
 
     def test_label_map_and_fit_from_conflict(self):
-        train = TabularDatasetFromDataFrame(self._df(), target_cols='level')
+        train = TabularDataFrameDataset(self._df(), target_cols='level')
         with pytest.raises(ValueError, match="not both"):
-            TabularDatasetFromDataFrame(self._df(), fit_from=train, label_map={'low': 0, 'medium': 1, 'high': 2})
+            TabularDataFrameDataset(self._df(), fit_from=train, label_map={'low': 0, 'medium': 1, 'high': 2})
 
     def test_duplicate_indices_raise(self):
         with pytest.raises(ValueError, match="same index"):
-            TabularDatasetFromDataFrame(self._df(), target_cols='level', label_map={'low': 0, 'medium': 0, 'high': 1})
+            TabularDataFrameDataset(self._df(), target_cols='level', label_map={'low': 0, 'medium': 0, 'high': 1})

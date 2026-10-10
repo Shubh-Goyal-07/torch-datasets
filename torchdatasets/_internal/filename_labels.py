@@ -3,6 +3,8 @@
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from torchdatasets._internal.files import list_files
+
 
 def label_from_filename(path: Path, delimiter: str) -> str:
     """Return the class name at the start of a file name.
@@ -26,7 +28,7 @@ def samples_from_filenames(
 ) -> Tuple[List[Tuple[Path, int]], Dict[str, int]]:
     """Index a folder of files whose names start with their class name.
 
-    Only files directly inside ``root`` are read (sub-folders are ignored).
+    Only files directly inside ``root`` are read (sub-folders and hidden files are ignored).
 
     Args:
         root (Path): Folder holding the files.
@@ -49,10 +51,10 @@ def samples_from_filenames(
     if not root.is_dir():
         raise FileNotFoundError(f"Directory not found: '{root}'")
 
-    allowed = {ext.lower() for ext in extensions}
-    files = sorted(p for p in root.iterdir() if p.is_file() and p.suffix.lower() in allowed)
+    allowed = sorted({ext.lower() for ext in extensions})
+    files = list_files(root, allowed)  # sorted, hidden files (e.g. ._cat_001.jpg) left out
     if not files:
-        raise FileNotFoundError(f"No files with extensions {sorted(allowed)} found in '{root}'.")
+        raise FileNotFoundError(f"No files with extensions {allowed} found in '{root}'.")
 
     named = [(path, label_from_filename(path, delimiter)) for path in files]
 

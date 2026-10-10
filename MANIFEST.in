@@ -1,0 +1,4 @@
+# Extra files for the source distribution (the wheel only contains the torchdatasets package).
+include CHANGELOG.md CONTRIBUTING.md BATCHING.md
+graft tests
+global-exclude *.py[cod]

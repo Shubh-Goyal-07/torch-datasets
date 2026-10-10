@@ -1,18 +1,18 @@
 """Audio datasets.
 
-    from torchdatasets.audio import AudioSubdirDataset, AudioCSVXLSXDataset
+    from torchdatasets.audio import AudioSubdirDataset, AudioCSVDataset
 """
 
 from .classification import (
     BaseAudioClassificationDataset,
-    AudioCSVXLSXDataset,
+    AudioCSVDataset,
     AudioSingleDirDataset,
     AudioSubdirDataset,
 )
 
 __all__ = [
     "BaseAudioClassificationDataset",
-    "AudioCSVXLSXDataset",
+    "AudioCSVDataset",
     "AudioSingleDirDataset",
     "AudioSubdirDataset",
 ]

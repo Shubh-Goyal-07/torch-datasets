@@ -16,6 +16,7 @@ class TripletWrapper(BaseMetricLearningWrapper):
     def __init__(
             self,
             dataset: Dataset,
+            *,
             transform_pos: Optional[Callable] = None,
             transform_neg: Optional[Callable] = None,
             random_state: Optional[int] = None
@@ -32,7 +33,7 @@ class TripletWrapper(BaseMetricLearningWrapper):
         Raises:
             ValueError: If the dataset has fewer than 2 classes.
         """
-        super().__init__(dataset, random_state)
+        super().__init__(dataset, random_state=random_state)
         self.transform_pos = transform_pos
         self.transform_neg = transform_neg
         self._require_two_classes()

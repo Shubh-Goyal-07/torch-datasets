@@ -2,10 +2,11 @@ from pathlib import Path
 from typing import List, Optional, Callable, Union
 
 from torchdatasets.image.segmentation.base import BaseImageSegmentationDataset
+from torchdatasets._internal.files import list_files
 from torchdatasets._internal.io.image import DEFAULT_IMAGE_EXTENSIONS
 
 
-class ImageSegMultidirDataset(BaseImageSegmentationDataset):
+class ImageSegMultiDirDataset(BaseImageSegmentationDataset):
     """Image Segmentation Dataset from Two Directories.
 
     Works for the following directory structure:
@@ -21,12 +22,14 @@ class ImageSegMultidirDataset(BaseImageSegmentationDataset):
     A mask is matched by name (image stem + suffix). Its extension may differ from the
     image's (e.g. image1.jpg + image1.png); if several masks share the name, the one with
     the image's own extension is used, otherwise the first in ``mask_extensions`` order.
+    Hidden files (names starting with ``.``, such as macOS ``._image1.jpg`` files) are skipped.
     """
 
     def __init__(
         self,
         image_dir: Union[str, Path],
         mask_dir: Union[str, Path],
+        *,
         transform: Optional[Callable] = None,
         return_path: bool = False,
         extensions: Optional[List[str]] = None,
@@ -73,11 +76,7 @@ class ImageSegMultidirDataset(BaseImageSegmentationDataset):
         masks = self._index_masks(self.mask_dir, self.mask_extensions)
 
         # iterate over all files in the image directory
-        for img_path in sorted(self.image_dir.glob("*")):
-            # skip files that are not images or do not have the correct extension
-            if not img_path.is_file() or img_path.suffix.lower() not in self.extensions:
-                continue
-            
+        for img_path in list_files(self.image_dir, self.extensions):  # sorted, hidden files left out
             candidates = masks.get(img_path.stem + (self.suffix or ""))
 
             # skip images without a mask

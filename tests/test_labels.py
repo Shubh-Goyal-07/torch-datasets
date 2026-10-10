@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import ConcatDataset, Dataset, Subset
 
 from torchdatasets._internal.labels import get_targets, indices_by_class, require_class_labels
-from torchdatasets.image import ImageSegMultidirDataset
+from torchdatasets.image import ImageSegMultiDirDataset
 
 
 class TestGetTargets:
@@ -35,7 +35,7 @@ class TestGetTargets:
     def test_dataset_without_targets_raises(self, image_seg_paired_dirs):
         img_dir, mask_dir, _ = image_seg_paired_dirs
         with pytest.raises(TypeError, match="no `targets`"):
-            get_targets(ImageSegMultidirDataset(img_dir, mask_dir))
+            get_targets(ImageSegMultiDirDataset(img_dir, mask_dir))
 
     def test_length_mismatch_raises(self):
         class Broken(Dataset):

@@ -12,7 +12,8 @@ class BaseImageClassificationDataset(Dataset):
     """Base class to be used as parent class for image classification datasets"""
 
     def __init__(
-            self, 
+            self,
+            *,
             transform: Optional[Callable] = None,
             return_path: bool = False,
             extensions: Optional[List[str]] = None

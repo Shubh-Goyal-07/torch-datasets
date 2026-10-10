@@ -17,6 +17,7 @@ class ContrastiveWrapper(BaseMetricLearningWrapper):
     def __init__(
             self,
             dataset: Dataset,
+            *,
             same_class_prob: float = 0.5,
             transform_pair: Optional[Callable] = None,
             random_state: Optional[int] = None
@@ -36,7 +37,7 @@ class ContrastiveWrapper(BaseMetricLearningWrapper):
         """
         if not 0 <= same_class_prob <= 1:
             raise ValueError(f"same_class_prob must be between 0 and 1, got {same_class_prob}.")
-        super().__init__(dataset, random_state)
+        super().__init__(dataset, random_state=random_state)
         self.same_class_prob = same_class_prob
         self.transform_pair = transform_pair
         if same_class_prob < 1:

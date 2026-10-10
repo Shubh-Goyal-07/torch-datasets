@@ -38,7 +38,7 @@ class TransformSubset(Subset):
     ``targets`` gives the labels of the kept samples, in subset order.
     """
 
-    def __init__(self, dataset: Dataset, indices: Sequence[int], transform: Optional[Callable] = None) -> None:
+    def __init__(self, dataset: Dataset, indices: Sequence[int], *, transform: Optional[Callable] = None) -> None:
         """Initialize the subset.
 
         Args:
@@ -86,6 +86,7 @@ class TransformSubset(Subset):
 
 def train_val_split(
     dataset: Dataset,
+    *,
     val_ratio: float = 0.2,
     train_transform: Optional[Callable] = None,
     val_transform: Optional[Callable] = None,
@@ -95,7 +96,7 @@ def train_val_split(
     """Split a dataset into a training and a validation part.
 
     Each part is a :class:`TransformSubset` with its own transform. A tabular dataset is instead
-    rebuilt into two ``TabularDatasetFromDataFrame`` objects: the training part refits the feature
+    rebuilt into two ``TabularDataFrameDataset`` objects: the training part refits the feature
     preprocessing (fill values, category encoding, scaling) on its own rows, and the validation
     part reuses it with ``fit_from``, so nothing about the validation rows leaks into training.
     The class list comes from the whole dataset, so every part uses the same class indices.
@@ -132,6 +133,7 @@ def train_val_split(
 
 def train_val_test_split(
     dataset: Dataset,
+    *,
     val_ratio: float = 0.1,
     test_ratio: float = 0.1,
     train_transform: Optional[Callable] = None,
@@ -183,9 +185,9 @@ def _split(
         _warn_about_classes_missing_from_training(dataset, labels, parts[0])
 
     tabular = sys.modules.get("torchdatasets.tabular.from_dataframe")
-    if tabular is not None and isinstance(dataset, tabular.TabularDatasetFromDataFrame):
+    if tabular is not None and isinstance(dataset, tabular.TabularDataFrameDataset):
         return _split_tabular(dataset, parts, transforms)
-    return [TransformSubset(dataset, indices, transform) for indices, transform in zip(parts, transforms)]
+    return [TransformSubset(dataset, indices, transform=transform) for indices, transform in zip(parts, transforms)]
 
 
 def _class_labels(dataset: Dataset) -> Optional[List[int]]:
@@ -249,7 +251,7 @@ def _split_indices(
 
 def _split_tabular(dataset: Any, parts: List[List[int]], transforms: List[Optional[Callable]]) -> List[Dataset]:
     """Rebuild a tabular dataset's rows into parts, fitting the preprocessing on the first one."""
-    from torchdatasets.tabular.from_dataframe import TabularDatasetFromDataFrame
+    from torchdatasets.tabular.from_dataframe import TabularDataFrameDataset
 
     # the dataset's rows are its dataframe's rows, minus duplicates if it dropped them
     frame = dataset.dataframe.drop_duplicates() if dataset.drop_duplicates else dataset.dataframe
@@ -263,7 +265,7 @@ def _split_tabular(dataset: Any, parts: List[List[int]], transforms: List[Option
     single_class_column = dataset.task == "classification" and len(dataset.target_cols) == 1 and not dataset.n_bins
     label_map = dict(dataset.class_to_idx) if single_class_column else None
 
-    train = TabularDatasetFromDataFrame(
+    train = TabularDataFrameDataset(
         frame.iloc[parts[0]],
         target_cols=dataset.target_cols,
         feature_cols=dataset.feature_cols,
@@ -280,7 +282,7 @@ def _split_tabular(dataset: Any, parts: List[List[int]], transforms: List[Option
         label_map=label_map,
     )
     return [train] + [
-        TabularDatasetFromDataFrame(
+        TabularDataFrameDataset(
             frame.iloc[rows],
             fit_from=train,
             drop_duplicates=dataset.drop_duplicates,

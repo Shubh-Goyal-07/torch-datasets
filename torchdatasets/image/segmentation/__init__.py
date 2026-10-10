@@ -1,13 +1,13 @@
 """Image segmentation datasets (image + mask pairs)."""
 
 from .base import BaseImageSegmentationDataset
-from .from_csv import ImageSegCSVXLSXDataset
-from .from_multidir import ImageSegMultidirDataset
+from .from_csv import ImageSegCSVDataset
+from .from_multidir import ImageSegMultiDirDataset
 from .from_singledir import ImageSegSingleDirDataset
 
 __all__ = [
     "BaseImageSegmentationDataset",
-    "ImageSegCSVXLSXDataset",
-    "ImageSegMultidirDataset",
+    "ImageSegCSVDataset",
+    "ImageSegMultiDirDataset",
     "ImageSegSingleDirDataset",
 ]

@@ -1,11 +1,18 @@
 from pathlib import Path
-from typing import List, Optional, Callable, Union
+from typing import List, Optional, Callable, Tuple, Union
 
 from torchdatasets.image.segmentation.base import BaseImageSegmentationDataset
-from torchdatasets._internal.io.common import load_csv_or_excel, require_columns
+from torchdatasets._internal.io.common import (
+    cell_text,
+    is_blank,
+    load_csv_or_excel,
+    no_usable_rows,
+    require_columns,
+    warn_skipped_rows,
+)
 
 
-class ImageSegCSVXLSXDataset(BaseImageSegmentationDataset):
+class ImageSegCSVDataset(BaseImageSegmentationDataset):
     """Image segmentation dataset from CSV or Excel file.
     
     Supports the following:
@@ -17,6 +24,7 @@ class ImageSegCSVXLSXDataset(BaseImageSegmentationDataset):
     def __init__(
             self,
             file_path: Union[str, Path],
+            *,
             transform: Optional[Callable] = None,
             image_col: str = "image",
             mask_col: str = "mask",
@@ -45,35 +53,42 @@ class ImageSegCSVXLSXDataset(BaseImageSegmentationDataset):
     def _load_samples(self) -> None:
         """Load image/mask pairs from the CSV or Excel file.
 
+        Rows with an empty cell, or whose image or mask is missing or has another extension,
+        are skipped with a warning.
+
         Raises:
             ValueError: If the file lacks image_col or mask_col.
             FileNotFoundError: If no row points to an existing image and mask with allowed extensions.
         """
-        df = load_csv_or_excel(self.file_path)
+        df = load_csv_or_excel(self.file_path, as_text=True)
 
         # Check if the required columns are present in the DataFrame
         require_columns(df, [self.image_col, self.mask_col], self.file_path)
 
         base_dir = self.file_path.parent
-        samples: List[tuple[Path, Path]] = []
+        samples: List[Tuple[Path, Path]] = []
+        skipped: List[str] = []
 
-        # Iterate over the rows of the DataFrame
-        for _, row in df.iterrows():
-            img_path = (base_dir / str(row[self.image_col])).resolve()
-            mask_path = (base_dir / str(row[self.mask_col])).resolve()
-            
-            # Check if the image and mask exist and have a valid extension
+        for image_cell, mask_cell in zip(df[self.image_col], df[self.mask_col]):
+            if is_blank(image_cell) or is_blank(mask_cell):
+                skipped.append(str(image_cell))
+                continue
+            img_path = (base_dir / cell_text(image_cell)).resolve()
+            mask_path = (base_dir / cell_text(mask_cell)).resolve()
+
+            # Keep the row only if the image and mask exist and have a valid extension
             img_ok = img_path.suffix.lower() in self.extensions and img_path.is_file()
             mask_ok = mask_path.suffix.lower() in self.extensions and mask_path.is_file()
             if img_ok and mask_ok:
                 samples.append((img_path, mask_path))
+            else:
+                skipped.append(cell_text(image_cell))
 
-        # Check if any valid samples were found
+        requirement = (
+            f"each row needs an existing image and mask with an extension in {sorted(self.extensions)}; "
+            f"relative paths start from the file's folder '{base_dir}'"
+        )
         if not samples:
-            raise FileNotFoundError(
-                f"No valid entries in '{self.file_path}': none of its {len(df)} row(s) points to an existing "
-                f"image and mask with extensions {sorted(self.extensions)}. Relative paths are resolved "
-                f"from '{base_dir}'."
-            )
+            raise no_usable_rows(self.file_path, skipped, len(df), requirement)
+        warn_skipped_rows(self.file_path, skipped, len(df), requirement)
         self.samples = samples
-    

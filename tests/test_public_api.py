@@ -11,24 +11,24 @@ import torchdatasets
 EXPECTED = {
     "torchdatasets.image": {
         "BaseImageClassificationDataset": "torchdatasets.image.classification.base",
-        "ImageCSVXLSXDataset": "torchdatasets.image.classification.from_csv",
+        "ImageCSVDataset": "torchdatasets.image.classification.from_csv",
         "ImageSingleDirDataset": "torchdatasets.image.classification.from_singledir",
         "ImageSubdirDataset": "torchdatasets.image.classification.from_subdir",
         "BaseImageSegmentationDataset": "torchdatasets.image.segmentation.base",
-        "ImageSegCSVXLSXDataset": "torchdatasets.image.segmentation.from_csv",
-        "ImageSegMultidirDataset": "torchdatasets.image.segmentation.from_multidir",
+        "ImageSegCSVDataset": "torchdatasets.image.segmentation.from_csv",
+        "ImageSegMultiDirDataset": "torchdatasets.image.segmentation.from_multidir",
         "ImageSegSingleDirDataset": "torchdatasets.image.segmentation.from_singledir",
     },
     "torchdatasets.audio": {
         "BaseAudioClassificationDataset": "torchdatasets.audio.classification.base",
-        "AudioCSVXLSXDataset": "torchdatasets.audio.classification.from_csv",
+        "AudioCSVDataset": "torchdatasets.audio.classification.from_csv",
         "AudioSingleDirDataset": "torchdatasets.audio.classification.from_singledir",
         "AudioSubdirDataset": "torchdatasets.audio.classification.from_subdir",
     },
     "torchdatasets.tabular": {
         "BaseTabularDataset": "torchdatasets.tabular.base",
-        "TabularDatasetFromDataFrame": "torchdatasets.tabular.from_dataframe",
-        "TabularDatasetFromCSVXLSX": "torchdatasets.tabular.from_csv",
+        "TabularDataFrameDataset": "torchdatasets.tabular.from_dataframe",
+        "TabularCSVDataset": "torchdatasets.tabular.from_csv",
     },
     "torchdatasets.metric_learning": {
         "BaseMetricLearningWrapper": "torchdatasets.metric_learning.base",
@@ -53,12 +53,56 @@ def test_package_exports(package):
         assert getattr(module, name) is getattr(importlib.import_module(defined_in), name)
 
 
+# Only the data source may be passed by position; every option is keyword-only, so options
+# can be added or reordered after 1.0 without breaking anyone's code.
+POSITIONAL = {
+    "ImageSubdirDataset": ["root_dir"],
+    "ImageSingleDirDataset": ["root_dir"],
+    "ImageCSVDataset": ["file_path"],
+    "ImageSegSingleDirDataset": ["root_dir"],
+    "ImageSegMultiDirDataset": ["image_dir", "mask_dir"],
+    "ImageSegCSVDataset": ["file_path"],
+    "AudioSubdirDataset": ["root_dir"],
+    "AudioSingleDirDataset": ["root_dir"],
+    "AudioCSVDataset": ["file_path"],
+    "TabularDataFrameDataset": ["dataframe"],
+    "TabularCSVDataset": ["file_path"],
+    "BaseImageClassificationDataset": [],
+    "BaseImageSegmentationDataset": [],
+    "BaseAudioClassificationDataset": [],
+    "BaseTabularDataset": [],
+    "BaseMetricLearningWrapper": ["dataset"],
+    "ContrastiveWrapper": ["dataset"],
+    "TripletWrapper": ["dataset"],
+    "FewShotWrapper": ["dataset"],
+    "TransformSubset": ["dataset", "indices"],
+    "train_val_split": ["dataset"],
+    "train_val_test_split": ["dataset"],
+}
+
+
+def test_every_public_name_has_a_positional_rule():
+    exported = {name for names in EXPECTED.values() for name in names}
+    assert exported == set(POSITIONAL)
+
+
+@pytest.mark.parametrize("package, name", [(p, n) for p, names in sorted(EXPECTED.items()) for n in sorted(names)])
+def test_only_the_data_source_is_positional(package, name):
+    import inspect
+
+    obj = getattr(importlib.import_module(package), name)
+    params = inspect.signature(obj.__init__ if inspect.isclass(obj) else obj).parameters.values()
+    positional = [p.name for p in params if p.kind is p.POSITIONAL_OR_KEYWORD and p.name != "self"]
+    assert positional == POSITIONAL[name]
+    assert not any(p.kind is p.VAR_POSITIONAL for p in params)
+
+
 @pytest.mark.parametrize(
     "package, names",
     [
-        ("torchdatasets.image.classification", ["ImageSubdirDataset", "ImageSingleDirDataset", "ImageCSVXLSXDataset"]),
-        ("torchdatasets.image.segmentation", ["ImageSegSingleDirDataset", "ImageSegMultidirDataset", "ImageSegCSVXLSXDataset"]),
-        ("torchdatasets.audio.classification", ["AudioSubdirDataset", "AudioSingleDirDataset", "AudioCSVXLSXDataset"]),
+        ("torchdatasets.image.classification", ["ImageSubdirDataset", "ImageSingleDirDataset", "ImageCSVDataset"]),
+        ("torchdatasets.image.segmentation", ["ImageSegSingleDirDataset", "ImageSegMultiDirDataset", "ImageSegCSVDataset"]),
+        ("torchdatasets.audio.classification", ["AudioSubdirDataset", "AudioSingleDirDataset", "AudioCSVDataset"]),
     ],
 )
 def test_task_packages_export_their_classes(package, names):

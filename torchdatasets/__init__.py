@@ -2,9 +2,9 @@
 
 Import dataset classes from their modality::
 
-    from torchdatasets.image import ImageSubdirDataset, ImageSegMultidirDataset
-    from torchdatasets.audio import AudioCSVXLSXDataset
-    from torchdatasets.tabular import TabularDatasetFromCSVXLSX
+    from torchdatasets.image import ImageSubdirDataset, ImageSegMultiDirDataset
+    from torchdatasets.audio import AudioCSVDataset
+    from torchdatasets.tabular import TabularCSVDataset
 
 and the helpers that work with any of them::
 

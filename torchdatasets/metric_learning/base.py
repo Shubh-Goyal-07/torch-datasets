@@ -20,7 +20,7 @@ class BaseMetricLearningWrapper(Dataset):
     always gets the same partners (useful for a fixed validation set), in any worker.
     """
 
-    def __init__(self, dataset: Dataset, random_state: Optional[int] = None) -> None:
+    def __init__(self, dataset: Dataset, *, random_state: Optional[int] = None) -> None:
         """Initialize the wrapper.
 
         Args:

@@ -84,3 +84,11 @@ class TestErrors:
         (tmp_path / "clips").mkdir()
         with pytest.raises(FileNotFoundError, match="No files with extensions"):
             AudioSingleDirDataset(tmp_path / "clips")
+
+
+class TestHiddenFiles:
+    def test_hidden_files_are_ignored(self, prefixed_clips):
+        (prefixed_clips / "._speech_0.wav").write_bytes(b"macOS metadata")
+        ds = AudioSingleDirDataset(prefixed_clips)
+        assert len(ds) == 3
+        assert sorted(ds.class_to_idx) == ["music", "speech"]

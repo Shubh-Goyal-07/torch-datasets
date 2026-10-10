@@ -136,3 +136,12 @@ class TestErrors:
         tmp_image_factory("imgs/_0.png")
         with pytest.raises(ValueError, match=r"no class name before '_'.*_0\.png"):
             ImageSingleDirDataset(tmp_path / "imgs")
+
+
+class TestHiddenFiles:
+    def test_hidden_files_are_ignored(self, prefixed_images):
+        (prefixed_images / "._cat_0.png").write_bytes(b"macOS metadata")
+        (prefixed_images / ".DS_Store").write_bytes(b"")
+        ds = ImageSingleDirDataset(prefixed_images)
+        assert len(ds) == 4
+        assert sorted(ds.class_to_idx) == ["bird", "cat", "dog"]

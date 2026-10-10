@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import List, Optional, Callable, Union
 
 from torchdatasets.image.classification.base import BaseImageClassificationDataset
+from torchdatasets._internal.files import list_files, list_subfolders
 
 
-# TODO: (Check viability) Add support for multi-label classification (comma/semicolon separated labels) in this dataset as well, similar to the CSV/XLSX version. 
+# TODO: (Check viability) Add support for multi-label classification (comma/semicolon separated labels) in this dataset as well, similar to the CSV version. 
 class ImageSubdirDataset(BaseImageClassificationDataset):
     """Image classification dataset from sub-directory structure. Similar to PyTorch's ImageFolder.
     
@@ -19,11 +20,15 @@ class ImageSubdirDataset(BaseImageClassificationDataset):
             image2.png
             ...
         ...
+
+    Hidden files and folders (names starting with ``.``, such as ``.ipynb_checkpoints`` or
+    macOS ``._image1.jpg`` files) are skipped.
     """
     
     def __init__(
             self,
             root_dir: Union[str, Path],
+            *,
             transform: Optional[Callable] = None,
             extensions: Optional[List[str]] = None,
             return_path: bool = False
@@ -31,7 +36,7 @@ class ImageSubdirDataset(BaseImageClassificationDataset):
         """Initialize the dataset from a sub-directory structure.
 
         Args:
-            root_dir (Union[str, Path]): Path to the root directory.
+            root_dir (Union[str, Path]): Path to the root directory, with one sub-folder per class.
             transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
             extensions (Optional[List[str]], optional): Optional list of image extensions. Defaults to None.
             return_path (bool, optional): Whether to return the path to the image. Defaults to False.
@@ -51,7 +56,8 @@ class ImageSubdirDataset(BaseImageClassificationDataset):
             raise FileNotFoundError(f"Directory not found: '{self.root}'")
 
         # Get all sub-directories as classes and create class_to_idx mapping
-        classes: List[str] = sorted([p.name for p in self.root.iterdir() if p.is_dir()])
+        # (hidden folders such as .ipynb_checkpoints are not classes)
+        classes: List[str] = [p.name for p in list_subfolders(self.root)]
         if not classes:
             raise FileNotFoundError(f"No class folders found in '{self.root}' (expected one sub-folder per class).")
         self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
@@ -59,9 +65,8 @@ class ImageSubdirDataset(BaseImageClassificationDataset):
 
         # Iterate over the classes and their images (sorted, so the order is the same on every OS)
         for cls in classes:
-            for img_path in sorted((self.root / cls).glob("*")):
-                if img_path.is_file() and img_path.suffix.lower() in self.extensions:
-                    samples.append((img_path, self.class_to_idx[cls]))
+            for img_path in list_files(self.root / cls, self.extensions):  # skips hidden files like ._x
+                samples.append((img_path, self.class_to_idx[cls]))
 
         if not samples:
             raise FileNotFoundError(

@@ -2,10 +2,16 @@ from pathlib import Path
 from typing import List, Optional, Callable, Union
 
 from torchdatasets.image.classification.base import BaseImageClassificationDataset
-from torchdatasets._internal.io.common import load_csv_or_excel, require_columns
+from torchdatasets._internal.io.common import (
+    labelled_rows,
+    load_csv_or_excel,
+    no_usable_rows,
+    require_columns,
+    warn_skipped_rows,
+)
 
 
-class ImageCSVXLSXDataset(BaseImageClassificationDataset):
+class ImageCSVDataset(BaseImageClassificationDataset):
     """Image classification dataset from CSV or Excel file.
     
     Supports the following:
@@ -17,6 +23,7 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
     def __init__(
             self,
             file_path: Union[str, Path],
+            *,
             transform: Optional[Callable] = None,
             return_path: bool = False,
             extensions: Optional[List[str]] = None,
@@ -27,7 +34,8 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
         """Initialize the dataset from a CSV or Excel file.
 
         Args:
-            file_path (Union[str, Path]): Path to the CSV or Excel file.
+            file_path (Union[str, Path]): Path to the CSV or Excel file. Image paths in it are used as
+                written, so relative ones start from the current working directory.
             transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
             return_path (bool, optional): Whether to return the path to the image. Defaults to False.
             extensions (Optional[List[str]], optional): Optional list of image extensions. Defaults to None.
@@ -46,42 +54,31 @@ class ImageCSVXLSXDataset(BaseImageClassificationDataset):
     def _load_samples(self) -> None:
         """Load samples from the CSV or Excel file.
 
+        Rows with an empty cell, a missing file or another extension are skipped, with a warning.
+
         Raises:
             ValueError: If the file lacks path_col or label_col.
-            FileNotFoundError: If no row points to an existing image with an allowed extension.
+            FileNotFoundError: If no row has a label and an existing image file with an allowed extension.
         """
 
-        df = load_csv_or_excel(self.file_path)
+        df = load_csv_or_excel(self.file_path, as_text=True)
 
         # Check if the required columns are present in the DataFrame
         require_columns(df, [self.path_col, self.label_col], self.file_path)
 
-        samples: List[tuple[Path, Union[str, List[str]]]] = []
-        classes: set[str] = set()
-
-        # Iterate over the rows of the DataFrame
-        for _, row in df.iterrows():
-            img_path = Path(row[self.path_col])
-            label_cell = row[self.label_col]
-
-            # Handle single-label vs multi-label classification
-            if self.label_sep is None:
-                labels: List[str] = [str(label_cell)]
-            else:
-                labels = [lbl.strip() for lbl in str(label_cell).split(self.label_sep)]
-
-            # Check if the image exists and has a valid extension
-            if img_path.suffix.lower() in self.extensions and img_path.is_file():
-                samples.append((img_path, labels if self.label_sep else labels[0]))
-                classes.update(labels)
+        # Keep rows with a label and an existing image file; the rest are skipped with a warning
+        samples, skipped = labelled_rows(df, self.path_col, self.label_col, self.label_sep, self.extensions)
+        requirement = (
+            f"each row needs a label and an existing image file with an extension in {sorted(self.extensions)}; "
+            "paths are used as written, so relative ones start from the current working directory"
+        )
 
         # Check if any valid samples were found
         if not samples:
-            raise FileNotFoundError(
-                f"No valid entries in '{self.file_path}': none of its {len(df)} row(s) points to an existing "
-                f"image with extensions {sorted(self.extensions)}. Paths are used as written, so relative "
-                "paths are resolved from the current working directory."
-            )
+            raise no_usable_rows(self.file_path, skipped, len(df), requirement)
+        warn_skipped_rows(self.file_path, skipped, len(df), requirement)
+
+        classes = {lbl for _, labels in samples for lbl in (labels if isinstance(labels, list) else [labels])}
 
         # Sort classes and create class_to_idx mapping
         classes = sorted(classes)

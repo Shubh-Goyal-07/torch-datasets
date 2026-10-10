@@ -4,7 +4,9 @@ import pytest
 import pandas as pd
 from pathlib import Path
 
-from torchdatasets._internal.io.common import load_csv_or_excel
+import numpy as np
+
+from torchdatasets._internal.io.common import cell_text, is_blank, load_csv_or_excel
 
 
 class TestLoadCSV:
@@ -61,3 +63,22 @@ class TestLoadErrors:
         path = tmp_path / "nonexistent.csv"
         with pytest.raises(Exception):
             load_csv_or_excel(path)
+
+
+class TestCellHelpers:
+    """Tests for is_blank and cell_text (reading path and label cells)."""
+
+    @pytest.mark.parametrize("cell", [None, float("nan"), np.nan, pd.NA, pd.NaT, "", "   "])
+    def test_blank_cells(self, cell):
+        assert is_blank(cell)
+
+    @pytest.mark.parametrize("cell", ["a", "0", 0, 0.0, False])
+    def test_cells_with_a_value(self, cell):
+        assert not is_blank(cell)
+
+    @pytest.mark.parametrize(
+        "cell, text",
+        [(3.0, "3"), (np.float64(10.0), "10"), (2.5, "2.5"), (np.int64(4), "4"), (" cat ", "cat")],
+    )
+    def test_cell_text(self, cell, text):
+        assert cell_text(cell) == text

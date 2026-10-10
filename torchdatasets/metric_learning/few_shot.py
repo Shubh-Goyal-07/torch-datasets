@@ -20,6 +20,7 @@ class FewShotWrapper(BaseMetricLearningWrapper):
     def __init__(
             self,
             dataset: Dataset,
+            *,
             n_way: int = 5,
             k_shot: int = 1,
             q_query: int = 15,
@@ -52,7 +53,7 @@ class FewShotWrapper(BaseMetricLearningWrapper):
             raise ValueError(f"Need n_way >= 1, k_shot >= 1 and q_query >= 0, got {n_way}, {k_shot}, {q_query}.")
         if n_episodes is not None and n_episodes < 1:
             raise ValueError(f"n_episodes must be at least 1, got {n_episodes}.")
-        super().__init__(dataset, random_state)
+        super().__init__(dataset, random_state=random_state)
         self.n_way = n_way
         self.k_shot = k_shot
         self.q_query = q_query

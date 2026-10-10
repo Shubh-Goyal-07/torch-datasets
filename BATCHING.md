@@ -8,10 +8,10 @@ custom `collate_fn`.
 
 | Dataset | What can differ between samples | When | What to do |
 |---|---|---|---|
-| `ImageCSVXLSXDataset` | The label: a list of class indices of different lengths | Multi-label (`label_sep` set) | Turn the lists into multi-hot vectors in a `collate_fn` ([example](#multi-label-labels)) |
-| `AudioCSVXLSXDataset` | The label, as above | Multi-label (`label_sep` set) | Same as above |
-| `AudioSubdirDataset`, `AudioCSVXLSXDataset` | Waveform length (and channel count, mono vs stereo) | Clips of different durations or channel counts | Pad/crop in a `collate_fn` or a fixed-length transform ([example](#audio-of-different-lengths)) |
-| All image datasets (`ImageSubdirDataset`, `ImageCSVXLSXDataset`, `ImageSeg*Dataset`) | Image (and mask) height/width | Images of different sizes | Add a resize/crop transform ([example](#images-of-different-sizes)) |
+| `ImageCSVDataset` | The label: a list of class indices of different lengths | Multi-label (`label_sep` set) | Turn the lists into multi-hot vectors in a `collate_fn` ([example](#multi-label-labels)) |
+| `AudioCSVDataset` | The label, as above | Multi-label (`label_sep` set) | Same as above |
+| All audio datasets (`AudioSubdirDataset`, `AudioSingleDirDataset`, `AudioCSVDataset`) | Waveform length (and channel count, mono vs stereo) | Clips of different durations or channel counts | Pad/crop in a `collate_fn` or a fixed-length transform ([example](#audio-of-different-lengths)) |
+| All image datasets (`ImageSubdirDataset`, `ImageSingleDirDataset`, `ImageCSVDataset`, `ImageSeg*Dataset`) | Image (and mask) height/width | Images of different sizes | Add a resize/crop transform ([example](#images-of-different-sizes)) |
 
 Tabular datasets always return fixed-size tensors, so the default `DataLoader` works as is.
 
@@ -42,7 +42,7 @@ The old `transforms.ToTensor()` expects a PIL image or numpy array and raises a
 Resize or crop to a fixed size in the transform:
 
 ```python
-from torchdatasets.image.classification.from_subdir import ImageSubdirDataset
+from torchdatasets.image import ImageSubdirDataset
 
 ds = ImageSubdirDataset("data/train", transform=v2.Resize((224, 224)))
 ```
@@ -52,9 +52,9 @@ applies the same geometry to both (masks are resized with nearest-neighbour, so 
 stay intact):
 
 ```python
-from torchdatasets.image.segmentation.from_multidir import ImageSegMultidirDataset
+from torchdatasets.image import ImageSegMultiDirDataset
 
-ds = ImageSegMultidirDataset(
+ds = ImageSegMultiDirDataset(
     "data/images", "data/masks",
     transform=v2.Compose([v2.RandomResizedCrop((256, 256)), v2.RandomHorizontalFlip()]),
 )
@@ -68,7 +68,7 @@ vectors (e.g. for `BCEWithLogitsLoss`):
 ```python
 import torch
 from torch.utils.data import DataLoader
-from torchdatasets.image.classification.from_csv import ImageCSVXLSXDataset
+from torchdatasets.image import ImageCSVDataset
 
 
 def multi_hot_collate(num_classes):
@@ -81,7 +81,7 @@ def multi_hot_collate(num_classes):
     return collate
 
 
-ds = ImageCSVXLSXDataset("labels.csv", label_sep=",", transform=v2.Resize((224, 224)))
+ds = ImageCSVDataset("labels.csv", label_sep=",", transform=v2.Resize((224, 224)))
 loader = DataLoader(ds, batch_size=32, collate_fn=multi_hot_collate(len(ds.class_to_idx)))
 ```
 
@@ -95,7 +95,7 @@ its longest clip (and keep the true lengths, e.g. for masking):
 ```python
 import torch
 import torch.nn.functional as F
-from torchdatasets.audio.classification.from_csv import AudioCSVXLSXDataset
+from torchdatasets.audio import AudioCSVDataset
 
 
 def pad_collate(batch):
@@ -107,7 +107,7 @@ def pad_collate(batch):
     return padded, labels, lengths
 
 
-ds = AudioCSVXLSXDataset("clips.csv", sample_rate=16000)
+ds = AudioCSVDataset("clips.csv", sample_rate=16000)
 loader = DataLoader(ds, batch_size=16, collate_fn=pad_collate)
 ```
 
@@ -116,7 +116,7 @@ default `DataLoader` works:
 
 ```python
 import torch.nn.functional as F
-from torchdatasets.audio.classification.from_subdir import AudioSubdirDataset
+from torchdatasets.audio import AudioSubdirDataset
 
 
 def fixed_length_mono(num_samples):

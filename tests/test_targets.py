@@ -12,14 +12,14 @@ import torch
 
 sf = pytest.importorskip("soundfile")
 
-from torchdatasets.audio import AudioCSVXLSXDataset, AudioSingleDirDataset, AudioSubdirDataset
+from torchdatasets.audio import AudioCSVDataset, AudioSingleDirDataset, AudioSubdirDataset
 from torchdatasets.image import (
-    ImageCSVXLSXDataset,
-    ImageSegMultidirDataset,
+    ImageCSVDataset,
+    ImageSegMultiDirDataset,
     ImageSingleDirDataset,
     ImageSubdirDataset,
 )
-from torchdatasets.tabular import TabularDatasetFromCSVXLSX, TabularDatasetFromDataFrame
+from torchdatasets.tabular import TabularCSVDataset, TabularDataFrameDataset
 
 
 def _wav(path):
@@ -57,14 +57,14 @@ def labelled_datasets(tmp_path, tmp_image_factory, tmp_csv_factory):
     return {
         "ImageSubdirDataset": ImageSubdirDataset(tmp_path / "img_subdir"),
         "ImageSingleDirDataset": ImageSingleDirDataset(tmp_path / "img_single"),
-        "ImageCSVXLSXDataset (multi-label)": ImageCSVXLSXDataset(
+        "ImageCSVDataset (multi-label)": ImageCSVDataset(
             tmp_csv_factory("img.csv", img_rows), label_sep=","
         ),
         "AudioSubdirDataset": AudioSubdirDataset(tmp_path / "aud_subdir"),
         "AudioSingleDirDataset": AudioSingleDirDataset(tmp_path / "aud_single"),
-        "AudioCSVXLSXDataset": AudioCSVXLSXDataset(tmp_csv_factory("aud.csv", aud_rows)),
-        "TabularDatasetFromDataFrame": TabularDatasetFromDataFrame(df, target_cols="y"),
-        "TabularDatasetFromCSVXLSX": TabularDatasetFromCSVXLSX(tmp_path / "tab.csv", target_cols="y"),
+        "AudioCSVDataset": AudioCSVDataset(tmp_csv_factory("aud.csv", aud_rows)),
+        "TabularDataFrameDataset": TabularDataFrameDataset(df, target_cols="y"),
+        "TabularCSVDataset": TabularCSVDataset(tmp_path / "tab.csv", target_cols="y"),
     }
 
 
@@ -98,7 +98,7 @@ def test_single_label_targets_index_class_to_idx(labelled_datasets):
 
 
 def test_multi_label_targets_are_index_lists(labelled_datasets):
-    ds = labelled_datasets["ImageCSVXLSXDataset (multi-label)"]
+    ds = labelled_datasets["ImageCSVDataset (multi-label)"]
     assert ds.targets == [[ds.class_to_idx["dog"]], [ds.class_to_idx["cat"], ds.class_to_idx["dog"]]]
 
 
@@ -111,4 +111,4 @@ def test_targets_follow_samples(labelled_datasets):
 
 def test_segmentation_datasets_have_no_targets(image_seg_paired_dirs):
     img_dir, mask_dir, _ = image_seg_paired_dirs
-    assert not hasattr(ImageSegMultidirDataset(img_dir, mask_dir), "targets")
+    assert not hasattr(ImageSegMultiDirDataset(img_dir, mask_dir), "targets")

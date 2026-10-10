@@ -4,7 +4,7 @@ import torch
 from typing import Any, List, Dict, Optional, Callable, Union
 from .base import BaseTabularDataset
 
-class TabularDatasetFromDataFrame(BaseTabularDataset):
+class TabularDataFrameDataset(BaseTabularDataset):
     """Tabular dataset from a pandas DataFrame.
 
     For classification with a single target column, labels (strings or numbers) are
@@ -14,13 +14,14 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
     To build validation/test datasets that are preprocessed exactly like the training
     data, pass the training dataset as ``fit_from``::
 
-        train_ds = TabularDatasetFromDataFrame(train_df, target_cols="label")
-        val_ds = TabularDatasetFromDataFrame(val_df, fit_from=train_ds)
+        train_ds = TabularDataFrameDataset(train_df, target_cols="label")
+        val_ds = TabularDataFrameDataset(val_df, fit_from=train_ds)
     """
 
     def __init__(
         self,
         dataframe: pd.DataFrame,
+        *,
         target_cols: Optional[Union[str, List[str]]] = None,
         feature_cols: Optional[Union[str, List[str]]] = None,
         task: Optional[str] = 'classification',
@@ -36,7 +37,7 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         # Reuse fitted preprocessing from another dataset (e.g. train -> val/test)
-        fit_from: Optional["TabularDatasetFromDataFrame"] = None,
+        fit_from: Optional["TabularDataFrameDataset"] = None,
         # Fixed class indices for a single-column classification target
         label_map: Optional[Dict[Any, int]] = None
     ) -> None:
@@ -68,8 +69,8 @@ class TabularDatasetFromDataFrame(BaseTabularDataset):
             raise TypeError("dataframe must be a pandas DataFrame")
 
         if fit_from is not None:
-            if not isinstance(fit_from, TabularDatasetFromDataFrame):
-                raise TypeError("fit_from must be a TabularDatasetFromDataFrame (or TabularDatasetFromCSVXLSX)")
+            if not isinstance(fit_from, TabularDataFrameDataset):
+                raise TypeError("fit_from must be a TabularDataFrameDataset (or TabularCSVDataset)")
             target_cols = fit_from.target_cols if target_cols is None else target_cols
             feature_cols = fit_from.feature_cols if feature_cols is None else feature_cols
             task = fit_from.task

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import tempfile
 import os
-from torchdatasets.tabular.from_csv import TabularDatasetFromCSVXLSX
+from torchdatasets.tabular.from_csv import TabularCSVDataset
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ def create_duplicates_csv(path):
 # Test class
 # ---------------------------------------------------------------------------
 
-class TestTabularDatasetFromCSVXLSX:
+class TestTabularCSVDataset:
 
     # ------------------------------------------------------------------ #
     # Fixtures
@@ -81,7 +81,7 @@ class TestTabularDatasetFromCSVXLSX:
     # ------------------------------------------------------------------ #
 
     def test_basic_classification_from_csv(self, cls_csv):
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=cls_csv,
             target_cols='target_class',
             task='classification',
@@ -92,7 +92,7 @@ class TestTabularDatasetFromCSVXLSX:
         assert dataset.y.dtype == torch.long
 
     def test_basic_regression_from_csv(self, reg_csv):
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=reg_csv,
             target_cols='target_reg',
             task='regression',
@@ -102,7 +102,7 @@ class TestTabularDatasetFromCSVXLSX:
         assert dataset.y.dim() == 1
 
     def test_explicit_feature_cols(self, reg_csv):
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=reg_csv,
             target_cols='target_reg',
             feature_cols=['num_feature1'],
@@ -116,7 +116,7 @@ class TestTabularDatasetFromCSVXLSX:
 
     def test_file_not_found(self):
         with pytest.raises(FileNotFoundError):
-            TabularDatasetFromCSVXLSX(
+            TabularCSVDataset(
                 file_path='nonexistent_file.csv',
                 target_cols='target_class',
             )
@@ -126,7 +126,7 @@ class TestTabularDatasetFromCSVXLSX:
     # ------------------------------------------------------------------ #
 
     def test_get_dataset_info_classification(self, cls_csv):
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=cls_csv,
             target_cols='target_class',
             feature_cols=['num_feature1'],
@@ -146,7 +146,7 @@ class TestTabularDatasetFromCSVXLSX:
         assert 'num_classes' in info
 
     def test_get_dataset_info_regression(self, reg_csv):
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=reg_csv,
             target_cols='target_reg',
             task='regression',
@@ -163,7 +163,7 @@ class TestTabularDatasetFromCSVXLSX:
 
     def test_n_bins_classification(self, reg_csv):
         """Continuous target discretized into bins for classification."""
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=reg_csv,
             target_cols='target_reg',
             task='classification',
@@ -177,7 +177,7 @@ class TestTabularDatasetFromCSVXLSX:
     # ------------------------------------------------------------------ #
 
     def test_scaling_standard(self, reg_csv):
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=reg_csv,
             target_cols='target_reg',
             feature_cols=['num_feature2'],
@@ -187,7 +187,7 @@ class TestTabularDatasetFromCSVXLSX:
         assert abs(dataset.X[:, 0].mean().item()) < 1e-4
 
     def test_scaling_minmax(self, reg_csv):
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=reg_csv,
             target_cols='target_reg',
             feature_cols=['num_feature1'],
@@ -200,7 +200,7 @@ class TestTabularDatasetFromCSVXLSX:
     def test_scaling_none(self, reg_csv):
         """With scaling_type='none', raw values should be preserved."""
         raw_df = pd.read_csv(reg_csv)
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=reg_csv,
             target_cols='target_reg',
             feature_cols=['num_feature2'],
@@ -215,7 +215,7 @@ class TestTabularDatasetFromCSVXLSX:
     # ------------------------------------------------------------------ #
 
     def test_drop_duplicates(self, dup_csv):
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=dup_csv,
             target_cols='target',
             task='classification',
@@ -224,7 +224,7 @@ class TestTabularDatasetFromCSVXLSX:
         assert len(dataset) == 3  # 5 rows − 2 exact duplicates
 
     def test_duplicates_kept_by_default(self, dup_csv):
-        dataset = TabularDatasetFromCSVXLSX(file_path=dup_csv, target_cols='target')
+        dataset = TabularCSVDataset(file_path=dup_csv, target_cols='target')
         assert len(dataset) == 5
 
     # ------------------------------------------------------------------ #
@@ -233,7 +233,7 @@ class TestTabularDatasetFromCSVXLSX:
 
     def test_transform_applied(self, cls_csv):
         transform = lambda x: x * 0  # noqa: E731
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=cls_csv,
             target_cols='target_class',
             feature_cols=['num_feature1'],
@@ -245,7 +245,7 @@ class TestTabularDatasetFromCSVXLSX:
 
     def test_target_transform_applied(self, cls_csv):
         target_transform = lambda y: y + 100  # noqa: E731
-        dataset = TabularDatasetFromCSVXLSX(
+        dataset = TabularCSVDataset(
             file_path=cls_csv,
             target_cols='target_class',
             feature_cols=['num_feature1'],
@@ -261,7 +261,7 @@ class TestTabularDatasetFromCSVXLSX:
 
     def test_invalid_fill_missing(self, cls_csv):
         with pytest.raises(ValueError):
-            TabularDatasetFromCSVXLSX(
+            TabularCSVDataset(
                 file_path=cls_csv,
                 target_cols='target_class',
                 fill_missing='interpolate',
@@ -269,7 +269,7 @@ class TestTabularDatasetFromCSVXLSX:
 
     def test_invalid_scaling_type(self, cls_csv):
         with pytest.raises(ValueError):
-            TabularDatasetFromCSVXLSX(
+            TabularCSVDataset(
                 file_path=cls_csv,
                 target_cols='target_class',
                 scaling_type='robust',
@@ -277,7 +277,7 @@ class TestTabularDatasetFromCSVXLSX:
 
     def test_invalid_task(self, cls_csv):
         with pytest.raises(ValueError):
-            TabularDatasetFromCSVXLSX(
+            TabularCSVDataset(
                 file_path=cls_csv,
                 target_cols='target_class',
                 task='clustering',
@@ -285,7 +285,7 @@ class TestTabularDatasetFromCSVXLSX:
 
     def test_missing_target_col(self, cls_csv):
         with pytest.raises(ValueError):
-            TabularDatasetFromCSVXLSX(
+            TabularCSVDataset(
                 file_path=cls_csv,
                 target_cols='nonexistent_col',
             )
@@ -302,8 +302,8 @@ class TestFitFromCSV:
         }).to_csv(train_path, index=False)
         pd.DataFrame({'num': [10.0], 'cat': ['C'], 'y': ['yes']}).to_csv(val_path, index=False)
 
-        train = TabularDatasetFromCSVXLSX(train_path, target_cols='y')
-        val = TabularDatasetFromCSVXLSX(val_path, fit_from=train)
+        train = TabularCSVDataset(train_path, target_cols='y')
+        val = TabularCSVDataset(val_path, fit_from=train)
 
         assert val.scaler is train.scaler
         assert val.y.tolist() == [train.class_to_idx['yes']]
@@ -323,8 +323,8 @@ class TestExcelFiles:
         df.to_csv(csv_path, index=False)
         df.to_excel(xlsx_path, index=False)
 
-        from_csv = TabularDatasetFromCSVXLSX(csv_path, target_cols='y')
-        from_xlsx = TabularDatasetFromCSVXLSX(xlsx_path, target_cols='y')
+        from_csv = TabularCSVDataset(csv_path, target_cols='y')
+        from_xlsx = TabularCSVDataset(xlsx_path, target_cols='y')
 
         assert torch.equal(from_xlsx.X, from_csv.X)
         assert torch.equal(from_xlsx.y, from_csv.y)
@@ -337,5 +337,5 @@ class TestLabelMapCSV:
     def test_label_map_is_passed_through(self, tmp_path):
         path = tmp_path / 'levels.csv'
         pd.DataFrame({'x': [1.0, 2.0, 3.0], 'level': ['high', 'low', 'medium']}).to_csv(path, index=False)
-        dataset = TabularDatasetFromCSVXLSX(path, target_cols='level', label_map={'low': 0, 'medium': 1, 'high': 2})
+        dataset = TabularCSVDataset(path, target_cols='level', label_map={'low': 0, 'medium': 1, 'high': 2})
         assert dataset.targets == [2, 0, 1]

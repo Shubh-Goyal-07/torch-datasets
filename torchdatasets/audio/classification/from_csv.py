@@ -2,10 +2,16 @@ from pathlib import Path
 from typing import List, Optional, Callable, Union
 
 from torchdatasets.audio.classification.base import BaseAudioClassificationDataset
-from torchdatasets._internal.io.common import load_csv_or_excel, require_columns
+from torchdatasets._internal.io.common import (
+    labelled_rows,
+    load_csv_or_excel,
+    no_usable_rows,
+    require_columns,
+    warn_skipped_rows,
+)
 
 
-class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
+class AudioCSVDataset(BaseAudioClassificationDataset):
     """Audio classification dataset from CSV or Excel file.
     
     Supports the following:
@@ -17,6 +23,7 @@ class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
     def __init__(
             self,
             file_path: Union[str, Path],
+            *,
             transform: Optional[Callable] = None,
             return_path: bool = False,
             sample_rate: Optional[int] = None,
@@ -28,12 +35,13 @@ class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
         """Initialize the dataset from a CSV or Excel file.
 
         Args:
-            file_path (Union[str, Path]): Path to the CSV or Excel file.
-            transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
-            return_path (bool, optional): Whether to return the path to the image. Defaults to False.
-            sample_rate (Optional[int], optional): Sample rate of the audio files. Defaults to None.
-            extensions (Optional[List[str]], optional): Optional list of image extensions. Defaults to None.
-            path_col (str, optional): Name of the column containing the path to the image. Defaults to "path".
+            file_path (Union[str, Path]): Path to the CSV or Excel file. Audio paths in it are used as
+                written, so relative ones start from the current working directory.
+            transform (Optional[Callable], optional): Optional transform to be applied to the waveforms. Defaults to None.
+            return_path (bool, optional): Whether to return the path to the audio file. Defaults to False.
+            sample_rate (Optional[int], optional): Resample every clip to this rate. Defaults to None (keep the file's rate).
+            extensions (Optional[List[str]], optional): Optional list of audio extensions. Defaults to None.
+            path_col (str, optional): Name of the column containing the path to the audio file. Defaults to "path".
             label_col (str, optional): Name of the column containing the label. Defaults to "label".
             label_sep (Optional[str], optional): Separator for multi-label classification. Defaults to None. If None, will assume single-label classification (i.e., no separator). If not None, it will use multi-label classification.
         """
@@ -48,43 +56,32 @@ class AudioCSVXLSXDataset(BaseAudioClassificationDataset):
     def _load_samples(self) -> None:
         """Load samples from the CSV or Excel file.
 
+        Rows with an empty cell, a missing file or another extension are skipped, with a warning.
+
         Raises:
             ValueError: If the file lacks path_col or label_col.
-            FileNotFoundError: If no row points to an existing audio file with an allowed extension.
+            FileNotFoundError: If no row has a label and an existing audio file with an allowed extension.
         """
 
-        df = load_csv_or_excel(self.file_path)
+        df = load_csv_or_excel(self.file_path, as_text=True)
 
         # Check if the required columns are present in the DataFrame
         require_columns(df, [self.path_col, self.label_col], self.file_path)
 
-        samples: List[tuple[Path, Union[str, List[str]]]] = []
-        classes: set[str] = set()
-
-        # Iterate over the rows of the DataFrame
-        for _, row in df.iterrows():
-            audio_path = Path(row[self.path_col])
-            label_cell = row[self.label_col]
-
-            # Handle single-label vs multi-label classification
-            if self.label_sep is None:
-                labels: List[str] = [str(label_cell)]
-            else:
-                labels = [lbl.strip() for lbl in str(label_cell).split(self.label_sep)]
-
-            # Check if the audio file exists and has a valid extension
-            if audio_path.suffix.lower() in self.extensions and audio_path.is_file():
-                samples.append((audio_path, labels if self.label_sep else labels[0]))
-                classes.update(labels)
+        # Keep rows with a label and an existing audio file; the rest are skipped with a warning
+        samples, skipped = labelled_rows(df, self.path_col, self.label_col, self.label_sep, self.extensions)
+        requirement = (
+            f"each row needs a label and an existing audio file with an extension in {sorted(self.extensions)}; "
+            "paths are used as written, so relative ones start from the current working directory"
+        )
 
         # Check if any valid samples were found
         if not samples:
-            raise FileNotFoundError(
-                f"No valid entries in '{self.file_path}': none of its {len(df)} row(s) points to an existing "
-                f"audio file with extensions {sorted(self.extensions)}. Paths are used as written, so relative "
-                "paths are resolved from the current working directory."
-            )
-        
+            raise no_usable_rows(self.file_path, skipped, len(df), requirement)
+        warn_skipped_rows(self.file_path, skipped, len(df), requirement)
+
+        classes = {lbl for _, labels in samples for lbl in (labels if isinstance(labels, list) else [labels])}
+
         # Sort classes and create class_to_idx mapping
         classes = sorted(classes)
         self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}

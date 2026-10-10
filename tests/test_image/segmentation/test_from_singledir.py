@@ -8,13 +8,13 @@ from torchdatasets.image.segmentation.from_singledir import ImageSegSingleDirDat
 
 class TestBasicLoading:
     def test_length(self, image_seg_single_dir):
-        src_dir, suffix, count = image_seg_single_dir
-        ds = ImageSegSingleDirDataset(src_dir=src_dir, suffix=suffix)
+        root_dir, suffix, count = image_seg_single_dir
+        ds = ImageSegSingleDirDataset(root_dir=root_dir, suffix=suffix)
         assert len(ds) == count
 
     def test_getitem_returns_tensors(self, image_seg_single_dir):
-        src_dir, suffix, _ = image_seg_single_dir
-        ds = ImageSegSingleDirDataset(src_dir=src_dir, suffix=suffix)
+        root_dir, suffix, _ = image_seg_single_dir
+        ds = ImageSegSingleDirDataset(root_dir=root_dir, suffix=suffix)
         image_out, mask_out = ds[0]
         assert isinstance(image_out, torch.Tensor)
         assert isinstance(mask_out, torch.Tensor)
@@ -24,16 +24,16 @@ class TestSuffixFiltering:
     def test_masks_not_treated_as_images(self, image_seg_single_dir):
         """Mask files (containing the suffix in their stem) should be excluded
         from the image list, so the length equals the number of *image* files."""
-        src_dir, suffix, count = image_seg_single_dir
-        ds = ImageSegSingleDirDataset(src_dir=src_dir, suffix=suffix)
+        root_dir, suffix, count = image_seg_single_dir
+        ds = ImageSegSingleDirDataset(root_dir=root_dir, suffix=suffix)
         assert len(ds) == count  # Only images, not masks
 
 
 class TestReturnPath:
     def test_return_path(self, image_seg_single_dir):
-        src_dir, suffix, _ = image_seg_single_dir
+        root_dir, suffix, _ = image_seg_single_dir
         ds = ImageSegSingleDirDataset(
-            src_dir=src_dir, suffix=suffix, return_path=True
+            root_dir=root_dir, suffix=suffix, return_path=True
         )
         result = ds[0]
         assert len(result) == 3
@@ -44,18 +44,18 @@ class TestErrors:
         tmp_image_factory("dir/a.png")
         with pytest.raises(FileNotFoundError, match="No image/mask pairs found"):
             ImageSegSingleDirDataset(
-                src_dir=tmp_path / "dir", suffix="_mask"
+                root_dir=tmp_path / "dir", suffix="_mask"
             )
 
     def test_missing_dir_raises(self, tmp_path):
         with pytest.raises(FileNotFoundError, match="Directory not found"):
-            ImageSegSingleDirDataset(src_dir=tmp_path / "nope", suffix="_mask")
+            ImageSegSingleDirDataset(root_dir=tmp_path / "nope", suffix="_mask")
 
     def test_empty_suffix_raises(self, tmp_path, tmp_image_factory):
         """With no suffix, masks can't be told apart from images."""
         tmp_image_factory("dir/a.png")
         with pytest.raises(ValueError, match="suffix"):
-            ImageSegSingleDirDataset(src_dir=tmp_path / "dir", suffix="")
+            ImageSegSingleDirDataset(root_dir=tmp_path / "dir", suffix="")
 
 
 class TestSuffixMatching:
@@ -66,7 +66,7 @@ class TestSuffixMatching:
         for name in ["img_mask_scan", "b"]:
             tmp_image_factory(f"seg/{name}.png")
             tmp_mask_factory(f"seg/{name}_mask.png")
-        ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")
+        ds = ImageSegSingleDirDataset(root_dir=tmp_path / "seg", suffix="_mask")
         assert sorted(img.name for img, _ in ds.samples) == ["b.png", "img_mask_scan.png"]
         assert all(mask.stem.endswith("_mask") for _, mask in ds.samples)
 
@@ -78,7 +78,7 @@ class TestMaskExtensions:
         tmp_mask_factory("seg/a_mask.png")
         tmp_image_factory("seg/b.png")
         tmp_mask_factory("seg/b_mask.png")
-        ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")
+        ds = ImageSegSingleDirDataset(root_dir=tmp_path / "seg", suffix="_mask")
         assert [(img.name, mask.name) for img, mask in ds.samples] == [
             ("a.jpg", "a_mask.png"),
             ("b.png", "b_mask.png"),
@@ -88,22 +88,33 @@ class TestMaskExtensions:
         tmp_image_factory("seg/a.png")
         tmp_mask_factory("seg/a_mask.bmp")
         tmp_mask_factory("seg/a_mask.png")
-        ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")
+        ds = ImageSegSingleDirDataset(root_dir=tmp_path / "seg", suffix="_mask")
         assert ds.samples[0][1].name == "a_mask.png"
 
     def test_mask_extensions_order_and_filter(self, tmp_path, tmp_image_factory, tmp_mask_factory):
         tmp_image_factory("seg/a.jpg")
         tmp_mask_factory("seg/a_mask.png")
         tmp_mask_factory("seg/a_mask.bmp")
-        ds = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask", mask_extensions=[".BMP", ".png"])
+        ds = ImageSegSingleDirDataset(root_dir=tmp_path / "seg", suffix="_mask", mask_extensions=[".BMP", ".png"])
         assert ds.samples[0][1].name == "a_mask.bmp"
 
         with pytest.raises(FileNotFoundError, match="No image/mask pairs found"):
-            ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask", mask_extensions=[".tiff"])
+            ImageSegSingleDirDataset(root_dir=tmp_path / "seg", suffix="_mask", mask_extensions=[".tiff"])
 
     def test_mixed_extension_pair_loads(self, tmp_path, tmp_image_factory, tmp_mask_factory):
         tmp_image_factory("seg/a.jpg", size=(8, 6))
         tmp_mask_factory("seg/a_mask.png", size=(6, 8))  # masks take (H, W)
-        image, mask = ImageSegSingleDirDataset(src_dir=tmp_path / "seg", suffix="_mask")[0]
+        image, mask = ImageSegSingleDirDataset(root_dir=tmp_path / "seg", suffix="_mask")[0]
         assert image.shape == (3, 6, 8)
         assert mask.shape == (1, 6, 8)
+
+
+class TestHiddenFiles:
+    def test_hidden_files_are_ignored(self, image_seg_single_dir):
+        root_dir, suffix, expected = image_seg_single_dir
+        (root_dir / "._a.png").write_bytes(b"macOS metadata")
+        (root_dir / f"._a{suffix}.png").write_bytes(b"macOS metadata")
+        ds = ImageSegSingleDirDataset(root_dir, suffix=suffix)
+        assert len(ds) == expected
+        for i in range(len(ds)):
+            ds[i]

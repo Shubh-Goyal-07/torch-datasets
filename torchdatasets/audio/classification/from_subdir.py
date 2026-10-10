@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import List, Optional, Callable, Union
 
 from torchdatasets.audio.classification.base import BaseAudioClassificationDataset
+from torchdatasets._internal.files import list_files, list_subfolders
 
 
-# TODO: (Check viability) Add support for multi-label classification (comma/semicolon separated labels) in this dataset as well, similar to the CSV/XLSX version. 
+# TODO: (Check viability) Add support for multi-label classification (comma/semicolon separated labels) in this dataset as well, similar to the CSV version. 
 class AudioSubdirDataset(BaseAudioClassificationDataset):
     """Audio classification dataset from sub-directory structure. Similar to PyTorch's ImageFolder.
     
@@ -19,11 +20,15 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
             audio2.mp3
             ...
         ...
+
+    Hidden files and folders (names starting with ``.``, such as ``.ipynb_checkpoints`` or
+    macOS ``._audio1.wav`` files) are skipped.
     """
 
     def __init__(
             self,
             root_dir: Union[str, Path],
+            *,
             transform: Optional[Callable] = None,
             extensions: Optional[List[str]] = None,
             sample_rate: Optional[int] = None,
@@ -32,11 +37,11 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
         """Initialize the dataset from a sub-directory structure.
 
         Args:
-            root_dir (Union[str, Path]): Path to the root directory.
-            transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
-            extensions (Optional[List[str]], optional): Optional list of image extensions. Defaults to None.
-            sample_rate (Optional[int], optional): Sample rate of the audio files. Defaults to None.
-            return_path (bool, optional): Whether to return the path to the image. Defaults to False.
+            root_dir (Union[str, Path]): Path to the root directory, with one sub-folder per class.
+            transform (Optional[Callable], optional): Optional transform to be applied to the waveforms. Defaults to None.
+            extensions (Optional[List[str]], optional): Optional list of audio extensions. Defaults to None.
+            sample_rate (Optional[int], optional): Resample every clip to this rate. Defaults to None (keep the file's rate).
+            return_path (bool, optional): Whether to return the path to the audio file. Defaults to False.
         """
         super().__init__(transform=transform, return_path=return_path, extensions=extensions, sample_rate=sample_rate)
         self.root: Path = Path(root_dir)
@@ -53,7 +58,8 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
             raise FileNotFoundError(f"Directory not found: '{self.root}'")
 
         # Get all sub-directories as classes and create class_to_idx mapping
-        classes: List[str] = sorted([p.name for p in self.root.iterdir() if p.is_dir()])
+        # (hidden folders such as .ipynb_checkpoints are not classes)
+        classes: List[str] = [p.name for p in list_subfolders(self.root)]
         if not classes:
             raise FileNotFoundError(f"No class folders found in '{self.root}' (expected one sub-folder per class).")
         self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
@@ -61,9 +67,8 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
 
         # Iterate over the classes and their audio files (sorted, so the order is the same on every OS)
         for cls in classes:
-            for audio_path in sorted((self.root / cls).glob("*")):
-                if audio_path.is_file() and audio_path.suffix.lower() in self.extensions:
-                    samples.append((audio_path, self.class_to_idx[cls]))
+            for audio_path in list_files(self.root / cls, self.extensions):  # skips hidden files like ._x
+                samples.append((audio_path, self.class_to_idx[cls]))
 
         if not samples:
             raise FileNotFoundError(

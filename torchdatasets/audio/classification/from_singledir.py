@@ -17,13 +17,15 @@ class AudioSingleDirDataset(BaseAudioClassificationDataset):
 
     The class name is the part of the file name before the first ``delimiter``
     (``speech_001.wav`` -> ``"speech"``); a name without the delimiter is used whole. Only
-    files directly inside ``root_dir`` are read. Class indices follow the sorted class
-    names, unless ``label_map`` gives them.
+    files directly inside ``root_dir`` are read, and hidden ones (names starting with ``.``,
+    such as macOS ``._speech_001.wav`` files) are skipped. Class indices follow the sorted
+    class names, unless ``label_map`` gives them.
     """
 
     def __init__(
             self,
             root_dir: Union[str, Path],
+            *,
             transform: Optional[Callable] = None,
             extensions: Optional[List[str]] = None,
             sample_rate: Optional[int] = None,

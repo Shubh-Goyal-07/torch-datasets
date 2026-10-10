@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List, Optional, Callable, Union
 
 from torchdatasets.image.segmentation.base import BaseImageSegmentationDataset
+from torchdatasets._internal.files import list_files
 from torchdatasets._internal.io.image import DEFAULT_IMAGE_EXTENSIONS
 
 
@@ -19,11 +20,13 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
     A mask is matched by name (image stem + suffix). Its extension may differ from the
     image's (e.g. image1.jpg + image1_mask.png); if several masks share the name, the one
     with the image's own extension is used, otherwise the first in ``mask_extensions`` order.
+    Hidden files (names starting with ``.``, such as macOS ``._image1.jpg`` files) are skipped.
     """
 
     def __init__(
         self,
-        src_dir: Union[str, Path],
+        root_dir: Union[str, Path],
+        *,
         suffix: str,
         transform: Optional[Callable] = None,
         return_path: bool = False,
@@ -34,7 +37,7 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
         """Initialize the dataset from a single directory.
 
         Args:
-            src_dir (Union[str, Path]): Path to the root directory.
+            root_dir (Union[str, Path]): Path to the root directory.
             suffix (str): Suffix to be appended to the image name to get the mask name.
             transform (Optional[Callable], optional): Optional transform to be applied to the images. Defaults to None.
             return_path (bool, optional): Whether to return the path to the image. Defaults to False.
@@ -46,7 +49,7 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
         if not suffix:
             raise ValueError("suffix must be a non-empty string, e.g. '_mask' for img.png + img_mask.png.")
         super().__init__(transform=transform, return_path=return_path, extensions=extensions, is_binary=is_binary)
-        self.src_dir = Path(src_dir)
+        self.root = Path(root_dir)
         self.suffix = suffix
         self.mask_extensions = [ext.lower() for ext in (mask_extensions or DEFAULT_IMAGE_EXTENSIONS)]
         self._load_samples()
@@ -59,24 +62,20 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
         """
 
         # check the source directory exists
-        if not self.src_dir.is_dir():
-            raise FileNotFoundError(f"Directory not found: '{self.src_dir}'")
+        if not self.root.is_dir():
+            raise FileNotFoundError(f"Directory not found: '{self.root}'")
 
         samples: List[tuple[Path, Path]] = []
 
         # index the directory's files by name: stem -> {extension: path}
-        masks = self._index_masks(self.src_dir, self.mask_extensions)
+        masks = self._index_masks(self.root, self.mask_extensions)
 
-        # iterate over all files in the source directory
-        for img_path in sorted(self.src_dir.glob("*")):
+        # iterate over the visible image files in the directory (sorted)
+        for img_path in list_files(self.root, self.extensions):
 
             # skip mask files (stem ends with the suffix); a name that merely
             # contains the suffix elsewhere is still a valid image
             if img_path.stem.endswith(self.suffix):
-                continue
-            
-            # skip files that are not images or do not have the correct extension
-            if not img_path.is_file() or img_path.suffix.lower() not in self.extensions:
                 continue
             
             candidates = masks.get(img_path.stem + self.suffix)
@@ -91,7 +90,7 @@ class ImageSegSingleDirDataset(BaseImageSegmentationDataset):
         # check that at least one sample was found
         if not samples:
             raise FileNotFoundError(
-                f"No image/mask pairs found in '{self.src_dir}': looked for images with extensions "
+                f"No image/mask pairs found in '{self.root}': looked for images with extensions "
                 f"{sorted(self.extensions)} and masks named <image name>{self.suffix} with extensions "
                 f"{self.mask_extensions}."
             )

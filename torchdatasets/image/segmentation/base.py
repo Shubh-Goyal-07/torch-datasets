@@ -4,6 +4,7 @@ from torchvision import tv_tensors
 from typing import Dict, Optional, Callable, List, Tuple, Union
 from torch.utils.data import Dataset
 
+from torchdatasets._internal.files import list_files
 from torchdatasets._internal.io.image import DEFAULT_IMAGE_EXTENSIONS, load_image, load_mask
 
 
@@ -13,6 +14,7 @@ class BaseImageSegmentationDataset(Dataset):
 
     def __init__(
             self,
+            *,
             transform: Optional[Callable] = None,
             return_path: bool = False,
             extensions: Optional[List[str]] = None,
@@ -79,10 +81,8 @@ class BaseImageSegmentationDataset(Dataset):
             Dict[str, Dict[str, Path]]: Mask file stem -> {lower-case extension: path}.
         """
         masks: Dict[str, Dict[str, Path]] = {}
-        for mask_path in mask_dir.iterdir():
-            mask_ext = mask_path.suffix.lower()
-            if mask_path.is_file() and mask_ext in mask_extensions:
-                masks.setdefault(mask_path.stem, {})[mask_ext] = mask_path
+        for mask_path in list_files(mask_dir, mask_extensions):  # hidden files left out
+            masks.setdefault(mask_path.stem, {})[mask_path.suffix.lower()] = mask_path
         return masks
 
     @staticmethod
