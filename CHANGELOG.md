@@ -5,7 +5,7 @@ All notable changes to this project are listed here. The format is based on
 [Semantic Versioning](https://semver.org/): from 1.0.0 on, breaking changes only come with a new
 major version.
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-10-10
 
 The first stable release, rewritten since 0.0.3.
 
