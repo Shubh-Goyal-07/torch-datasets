@@ -84,13 +84,13 @@ for images, labels in dataloader:
 
 | Modality | Task | Data layout | Class | Import from |
 | -------- | ---- | ----------- | ----- | ----------- |
-| Image | Classification | One folder per class | `ImageSubdirDataset` | `torchdatasets.image` |
+| Image | Classification (single / multi-label) | One folder per class (`cat,dog/` for several labels) | `ImageSubdirDataset` | `torchdatasets.image` |
 | Image | Classification | One folder, class in the file name (`cat_001.jpg`) | `ImageSingleDirDataset` | `torchdatasets.image` |
 | Image | Classification (single / multi-label) | CSV or Excel file of paths and labels | `ImageCSVDataset` | `torchdatasets.image` |
 | Image | Segmentation | One folder: `img.jpg` + `img{suffix}.png` | `ImageSegSingleDirDataset` | `torchdatasets.image` |
 | Image | Segmentation | `images/` + `masks/` folders | `ImageSegMultiDirDataset` | `torchdatasets.image` |
 | Image | Segmentation | CSV or Excel file with `image` and `mask` path columns | `ImageSegCSVDataset` | `torchdatasets.image` |
-| Audio | Classification | One folder per class | `AudioSubdirDataset` | `torchdatasets.audio` |
+| Audio | Classification (single / multi-label) | One folder per class (`music,speech/` for several labels) | `AudioSubdirDataset` | `torchdatasets.audio` |
 | Audio | Classification | One folder, class in the file name (`speech_001.wav`) | `AudioSingleDirDataset` | `torchdatasets.audio` |
 | Audio | Classification (single / multi-label) | CSV or Excel file of paths and labels | `AudioCSVDataset` | `torchdatasets.audio` |
 | Tabular | Classification / regression | pandas DataFrame | `TabularDataFrameDataset` | `torchdatasets.tabular` |
@@ -119,6 +119,11 @@ both consistently.
 The single-folder classification datasets read the class from the part of the file name before
 the first `delimiter` (default `"_"`); pass `label_map={"cat": 0, "dog": 1}` to fix the class
 indices yourself.
+
+With `label_sep=","`, `ImageSubdirDataset` and `AudioSubdirDataset` read several labels from a
+folder name: the files in `root/cat,dog/` have both labels, and the classes are the individual
+labels (`cat`, `dog`). As with the multi-label CSV datasets, each label is then a list of class
+indices (see BATCHING.md to turn them into multi-hot vectors).
 
 Classification and tabular datasets expose `targets`: the label of every sample, in index order,
 read without loading any files. Use it for class counts, weights or samplers:

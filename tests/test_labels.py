@@ -5,7 +5,7 @@ import pytest
 import torch
 from torch.utils.data import ConcatDataset, Dataset, Subset
 
-from torchdatasets._internal.labels import get_targets, indices_by_class, require_class_labels
+from torchdatasets._internal.labels import get_targets, indices_by_class, require_class_labels, split_labels
 from torchdatasets.image import ImageSegMultiDirDataset
 
 
@@ -63,3 +63,19 @@ def test_indices_by_class_sorted_by_label():
     groups = indices_by_class([2, 0, 2, 1])
     assert groups == {0: [1], 1: [3], 2: [0, 2]}
     assert list(groups) == [0, 1, 2]
+
+
+class TestSplitLabels:
+    @pytest.mark.parametrize(
+        "text, labels",
+        [
+            ("cat,dog", ["cat", "dog"]),
+            (" cat , dog ", ["cat", "dog"]),
+            ("dog,cat,dog", ["dog", "cat"]),  # order kept, repeats dropped
+            ("cat,,dog,", ["cat", "dog"]),
+            (",", []),
+            ("cat", ["cat"]),
+        ],
+    )
+    def test_split(self, text, labels):
+        assert split_labels(text, ",") == labels

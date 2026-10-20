@@ -2,10 +2,9 @@ from pathlib import Path
 from typing import List, Optional, Callable, Union
 
 from torchdatasets.audio.classification.base import BaseAudioClassificationDataset
-from torchdatasets._internal.files import list_files, list_subfolders
+from torchdatasets._internal.subdir_labels import samples_from_subfolders
 
 
-# TODO: (Check viability) Add support for multi-label classification (comma/semicolon separated labels) in this dataset as well, similar to the CSV version. 
 class AudioSubdirDataset(BaseAudioClassificationDataset):
     """Audio classification dataset from sub-directory structure. Similar to PyTorch's ImageFolder.
     
@@ -21,6 +20,13 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
             ...
         ...
 
+    With ``label_sep`` set, a folder name can list several labels (multi-label classification):
+    root_dir/
+        cat/
+        cat,dog/        (with label_sep=",", these audio files are both "cat" and "dog")
+        dog/
+    The classes are then the individual labels, and each label is a list of class indices.
+
     Hidden files and folders (names starting with ``.``, such as ``.ipynb_checkpoints`` or
     macOS ``._audio1.wav`` files) are skipped.
     """
@@ -32,7 +38,8 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
             transform: Optional[Callable] = None,
             extensions: Optional[List[str]] = None,
             sample_rate: Optional[int] = None,
-            return_path: bool = False
+            return_path: bool = False,
+            label_sep: Optional[str] = None
         ) -> None:
         """Initialize the dataset from a sub-directory structure.
 
@@ -42,9 +49,12 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
             extensions (Optional[List[str]], optional): Optional list of audio extensions. Defaults to None.
             sample_rate (Optional[int], optional): Resample every clip to this rate. Defaults to None (keep the file's rate).
             return_path (bool, optional): Whether to return the path to the audio file. Defaults to False.
+            label_sep (Optional[str], optional): Separator between several labels in one folder name
+                (e.g. ``","``), for multi-label classification. Defaults to None (each folder is one class).
         """
         super().__init__(transform=transform, return_path=return_path, extensions=extensions, sample_rate=sample_rate)
         self.root: Path = Path(root_dir)
+        self.label_sep: Optional[str] = label_sep
         self._load_samples()
         self.create_metadata()
 
@@ -52,26 +62,7 @@ class AudioSubdirDataset(BaseAudioClassificationDataset):
         """Load samples from the sub-directory structure.
 
         Raises:
+            ValueError: If label_sep is an empty string, or a folder name has no label between the separators.
             FileNotFoundError: If root_dir does not exist, has no class folders, or no audio files.
         """
-        if not self.root.is_dir():
-            raise FileNotFoundError(f"Directory not found: '{self.root}'")
-
-        # Get all sub-directories as classes and create class_to_idx mapping
-        # (hidden folders such as .ipynb_checkpoints are not classes)
-        classes: List[str] = [p.name for p in list_subfolders(self.root)]
-        if not classes:
-            raise FileNotFoundError(f"No class folders found in '{self.root}' (expected one sub-folder per class).")
-        self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
-        samples: List[tuple[Path, int]] = []
-
-        # Iterate over the classes and their audio files (sorted, so the order is the same on every OS)
-        for cls in classes:
-            for audio_path in list_files(self.root / cls, self.extensions):  # skips hidden files like ._x
-                samples.append((audio_path, self.class_to_idx[cls]))
-
-        if not samples:
-            raise FileNotFoundError(
-                f"No files with extensions {sorted(self.extensions)} found in the class folders of '{self.root}'."
-            )
-        self.samples = samples
+        self.samples, self.class_to_idx = samples_from_subfolders(self.root, self.extensions, self.label_sep)

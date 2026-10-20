@@ -5,6 +5,18 @@ All notable changes to this project are listed here. The format is based on
 [Semantic Versioning](https://semver.org/): from 1.0.0 on, breaking changes only come with a new
 major version.
 
+## [Unreleased]
+
+### Added
+
+- `label_sep=` on `ImageSubdirDataset` and `AudioSubdirDataset` for multi-label classification from
+  folders: with `label_sep=","`, the files in `cat,dog/` have both labels, and the classes are the
+  individual labels. Based on Soham's pull request #11.
+
+### Changed
+
+- A label repeated in one CSV/Excel cell (`cat,dog,cat`) counts once.
+
 ## [1.0.0] - 2026-10-10
 
 The first stable release, rewritten since 0.0.3.
@@ -112,5 +124,6 @@ ds = ImageSubdirDataset("data/train", transform=v2.Compose([v2.Resize((224, 224)
 Early release that reserved the package name on PyPI: `ImageSubdirDataset` and
 `ImageSingleDirDataset` in `torchdatasets.vision.classification`, returning PIL images.
 
+[Unreleased]: https://github.com/Shubh-Goyal-07/torch-datasets/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/Shubh-Goyal-07/torch-datasets/releases/tag/v1.0.0
 [0.0.3]: https://pypi.org/project/torch-custom-datasets/0.0.3/

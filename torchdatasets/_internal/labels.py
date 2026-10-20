@@ -78,3 +78,24 @@ def indices_by_class(labels: Sequence[int]) -> Dict[int, List[int]]:
     for index, label in enumerate(labels):
         groups[label].append(index)
     return {label: groups[label] for label in sorted(groups)}
+
+
+def split_labels(text: str, sep: str) -> List[str]:
+    """The labels listed in one string, e.g. a CSV cell or a folder name (``"cat, dog"``).
+
+    Parts are stripped of surrounding spaces; empty parts and repeats are dropped, and the
+    order is kept.
+
+    Args:
+        text (str): The string.
+        sep (str): Separator between the labels.
+
+    Returns:
+        List[str]: The labels (empty if the string lists none).
+    """
+    labels: List[str] = []
+    for part in text.split(sep):
+        part = part.strip()
+        if part and part not in labels:
+            labels.append(part)
+    return labels

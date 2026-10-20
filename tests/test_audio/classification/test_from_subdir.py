@@ -112,3 +112,19 @@ class TestHiddenFiles:
         ds = AudioSubdirDataset(root)
         assert sorted(ds.class_to_idx) == sorted(classes)
         assert len(ds) == sum(classes.values())
+
+
+class TestMultiLabel:
+    def test_folder_names_list_the_labels(self, tmp_path):
+        for name in ["speech/0.wav", "music,speech/0.wav"]:
+            _create_wav(tmp_path / name)
+        ds = AudioSubdirDataset(tmp_path, label_sep=",")
+        assert ds.class_to_idx == {"music": 0, "speech": 1}
+        assert ds.targets == [[0, 1], [1]]
+        waveform, label = ds[0]
+        assert label == [0, 1]
+        assert waveform.ndim == 2
+
+    def test_without_label_sep_a_folder_name_is_one_class(self, tmp_path):
+        _create_wav(tmp_path / "music,speech" / "0.wav")
+        assert AudioSubdirDataset(tmp_path).class_to_idx == {"music,speech": 0}

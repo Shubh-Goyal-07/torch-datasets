@@ -39,6 +39,7 @@ def labelled_datasets(tmp_path, tmp_image_factory, tmp_csv_factory):
     for cls, n in {"cat": 2, "dog": 1}.items():
         for i in range(n):
             tmp_image_factory(f"img_subdir/{cls}/{i}.png")
+            tmp_image_factory(f"img_subdir_ml/{cls},bird/{i}.png")
             tmp_image_factory(f"img_single/{cls}_{i}.png")
             _wav(tmp_path / "aud_subdir" / cls / f"{i}.wav")
             _wav(tmp_path / "aud_single" / f"{cls}_{i}.wav")
@@ -56,6 +57,7 @@ def labelled_datasets(tmp_path, tmp_image_factory, tmp_csv_factory):
 
     return {
         "ImageSubdirDataset": ImageSubdirDataset(tmp_path / "img_subdir"),
+        "ImageSubdirDataset (multi-label)": ImageSubdirDataset(tmp_path / "img_subdir_ml", label_sep=","),
         "ImageSingleDirDataset": ImageSingleDirDataset(tmp_path / "img_single"),
         "ImageCSVDataset (multi-label)": ImageCSVDataset(
             tmp_csv_factory("img.csv", img_rows), label_sep=","

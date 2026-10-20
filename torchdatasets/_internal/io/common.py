@@ -5,6 +5,8 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 
+from torchdatasets._internal.labels import split_labels
+
 
 def require_columns(df: pd.DataFrame, columns: Sequence[str], file_path: Path) -> None:
     """Check that a loaded CSV/Excel file has the columns a dataset reads.
@@ -163,7 +165,7 @@ def labelled_rows(
         if label_sep is None:
             label: Union[str, List[str]] = cell_text(label_cell)
         else:
-            label = [part.strip() for part in cell_text(label_cell).split(label_sep) if part.strip()]
+            label = split_labels(cell_text(label_cell), label_sep)
         if not label:
             skipped.append(f"{row_name(position)}: no label")
         elif path.suffix.lower() in allowed and path.is_file():

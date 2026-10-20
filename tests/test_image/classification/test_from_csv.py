@@ -227,6 +227,12 @@ class TestSkippedRows:
 
 
 class TestMultiLabelCells:
+    def test_repeated_labels_count_once(self, tmp_image_factory, tmp_csv_factory):
+        p1 = tmp_image_factory("a.png")
+        csv_path = tmp_csv_factory("data.csv", [{"path": str(p1), "label": "cat;dog;cat"}])
+        ds = ImageCSVDataset(csv_path, label_sep=";")
+        assert ds.targets == [[0, 1]]
+
     def test_empty_parts_are_dropped(self, tmp_image_factory, tmp_csv_factory):
         p1 = tmp_image_factory("a.png")
         p2 = tmp_image_factory("b.png")

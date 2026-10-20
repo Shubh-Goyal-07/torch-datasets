@@ -8,8 +8,8 @@ custom `collate_fn`.
 
 | Dataset | What can differ between samples | When | What to do |
 |---|---|---|---|
-| `ImageCSVDataset` | The label: a list of class indices of different lengths | Multi-label (`label_sep` set) | Turn the lists into multi-hot vectors in a `collate_fn` ([example](#multi-label-labels)) |
-| `AudioCSVDataset` | The label, as above | Multi-label (`label_sep` set) | Same as above |
+| `ImageCSVDataset`, `ImageSubdirDataset` | The label: a list of class indices of different lengths | Multi-label (`label_sep` set) | Turn the lists into multi-hot vectors in a `collate_fn` ([example](#multi-label-labels)) |
+| `AudioCSVDataset`, `AudioSubdirDataset` | The label, as above | Multi-label (`label_sep` set) | Same as above |
 | All audio datasets (`AudioSubdirDataset`, `AudioSingleDirDataset`, `AudioCSVDataset`) | Waveform length (and channel count, mono vs stereo) | Clips of different durations or channel counts | Pad/crop in a `collate_fn` or a fixed-length transform ([example](#audio-of-different-lengths)) |
 | All image datasets (`ImageSubdirDataset`, `ImageSingleDirDataset`, `ImageCSVDataset`, `ImageSeg*Dataset`) | Image (and mask) height/width | Images of different sizes | Add a resize/crop transform ([example](#images-of-different-sizes)) |
 
